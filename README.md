@@ -6,9 +6,6 @@
 
 **NetVista** is a modern, high-performance Visual Reconnaissance tool designed for security researchers and bug bounty hunters. It combines network probing, technology fingerprinting, and visual intelligence to provide a comprehensive view of your target's attack surface.
 
-
-![NetVista Dashboard Mockup](https://via.placeholder.com/1200x600/1e293b/f1f5f9?text=NetVista+Interactive+Dashboard+Preview)
-
 ## ✨ Features
 
 - 🚀 **Asynchronous Discovery**: Ultra-fast HTTP probing and port scanning.
