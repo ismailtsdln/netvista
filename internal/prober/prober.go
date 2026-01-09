@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,7 +57,22 @@ func (p *Prober) probeURL(ctx context.Context, targetURL string) (*models.Target
 	}
 	defer resp.Body.Close()
 
+	// Simple title extraction
+	titleRegex := regexp.MustCompile("(?i)<title>(.*?)</title>")
+
+	// Read a bit of body for title
+	bodyBytes := make([]byte, 4096)
+	n, _ := resp.Body.Read(bodyBytes)
+	body := string(bodyBytes[:n])
+
+	title := "No Title"
+	matches := titleRegex.FindStringSubmatch(body)
+	if len(matches) > 1 {
+		title = matches[1]
+	}
+
 	metadata := models.ResponseMetadata{
+		Title:         title,
 		StatusCode:    resp.StatusCode,
 		ContentLength: resp.ContentLength,
 		Headers:       make(map[string]string),

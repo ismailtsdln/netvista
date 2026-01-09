@@ -5,11 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ismailtsdln/netvista/internal/engine"
+	"github.com/ismailtsdln/netvista/internal/plugins"
 	"github.com/ismailtsdln/netvista/internal/prober"
+	"github.com/ismailtsdln/netvista/internal/report"
 	"github.com/ismailtsdln/netvista/internal/screenshot"
+	"github.com/ismailtsdln/netvista/pkg/models"
 	"github.com/ismailtsdln/netvista/pkg/utils"
 )
 
@@ -46,7 +50,12 @@ func main() {
 		p := prober.NewProber(d)
 		e := engine.NewEngine(*concurrency, p)
 
+		pm := plugins.NewPluginManager()
+		pm.Register(&plugins.FingerprintPlugin{})
+		pm.Register(plugins.NewTakeoverPlugin())
+
 		var targets []string
+
 		if *nmapFile != "" {
 			fmt.Printf("Parsing Nmap XML: %s\n", *nmapFile)
 			targets, err = utils.ParseNmapXML(*nmapFile)
@@ -84,6 +93,7 @@ func main() {
 		ctx := context.Background()
 		results := e.Run(ctx, targets)
 
+		var scanResults []models.Target
 		for res := range results {
 			fmt.Printf("[+] Found: %s (%d)\n", res.URL, res.Metadata.StatusCode)
 
@@ -94,6 +104,31 @@ func main() {
 				fmt.Printf(" [!] Error capturing %s: %v\n", res.URL, err)
 			} else {
 				fmt.Printf(" [✓] Screenshot saved: %s\n", filename)
+			}
+			scanResults = append(scanResults, *res)
+		}
+
+		if len(scanResults) > 0 {
+			fmt.Println("\n[*] Generating reports...")
+
+			// Generate HTML
+			htmlPath := filepath.Join(*output, "report.html")
+			// We need a way to pass sanitize function to template
+			// For simplicity in this implementation, I'll update report.go or main.go to use a pre-sanitized name if needed
+			// Let's update models and report logic to handle this better
+
+			err = report.ExportJSON(scanResults, filepath.Join(*output, "results.json"))
+			if err != nil {
+				fmt.Printf(" [!] Error exporting JSON: %v\n", err)
+			}
+
+			// For HTML we need the template. We'll use a relative path for now.
+			templatePath := "web/templates/dashboard.html"
+			err = report.GenerateHTML(scanResults, templatePath, htmlPath)
+			if err != nil {
+				fmt.Printf(" [!] Error generating HTML report: %v\n", err)
+			} else {
+				fmt.Printf(" [✓] HTML report generated: %s\n", htmlPath)
 			}
 		}
 

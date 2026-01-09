@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"html/template"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ismailtsdln/netvista/pkg/models"
 )
@@ -13,7 +15,17 @@ type ReportData struct {
 }
 
 func GenerateHTML(results []models.Target, templatePath string, outputPath string) error {
-	tmpl, err := template.ParseFiles(templatePath)
+	tmpl, err := template.New(filepath.Base(templatePath)).Funcs(template.FuncMap{
+		"sanitize": func(s string) string {
+			// Basic sanitization similar to utils.SanitizeFilename
+			s = strings.Replace(s, "https://", "", 1)
+			s = strings.Replace(s, "http://", "", 1)
+			s = strings.ReplaceAll(s, "/", "_")
+			s = strings.ReplaceAll(s, ":", "_")
+			s = strings.ReplaceAll(s, ".", "_")
+			return strings.Trim(s, "_")
+		},
+	}).ParseFiles(templatePath)
 	if err != nil {
 		return err
 	}
