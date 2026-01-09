@@ -1,60 +1,140 @@
 # 👁️ NetVista v2.1.0-pro
 
 <p align="center">
-  <img src="web/assets/logo.png" alt="NetVista Logo" width="200">
+  <img src="web/assets/logo.png" alt="NetVista Logo" width="220">
 </p>
 
-**NetVista v2.1.0-pro** is a professional-grade Visual Reconnaissance tool refactored with **Hexagonal Architecture (Ports & Adapters)** for enterprise-scale reliability. It provides deep visibility into your target's attack surface through smart rendering, technology fingerprinting, and visual intelligence.
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go" alt="Go Version">
+  <img src="https://img.shields.io/badge/Release-v2.1.0--pro-purple?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Architecture-Hexagonal-orange?style=for-the-badge" alt="Architecture">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+</p>
 
-## ✨ Advanced Features (v2.0)
+---
 
-- 🏗️ **Hexagonal Architecture**: Decoupled core logic from infrastructure for extreme modularity and testability.
-- 📸 **Smart Rendering**: Adaptive waiting (NetworkIdle) and automatic detection/bypass of cookie consent overlays.
-- 🧠 **Framework Intelligence**: Automatic detection of modern SPA frameworks (React, Vue, etc.).
-- 🔄 **Incremental Scanning**: Intelligently skips previously processed targets to save time and resources.
-- ⚡ **Resource-Aware Scaling**: Thread-safe browser context pooling and responsive concurrency management.
-- 🔍 **Visual Deduplication**: Uses pHash to group visually identical hosts, reducing report noise.
-- 🛡️ **Advanced Resilience**: Exponential backoff and automated retries for transient network failures.
-- 📊 **Enterprise Reporting**: Multi-format exports (JSON, CSV, Markdown, Text, ZIP) and Interactive Dashboard 2.0.
+**NetVista v2.1.0-pro** is an enterprise-grade **Visual Reconnaissance & Intelligence** engine. Built with a robust **Hexagonal Architecture**, it transforms raw target lists into actionable visual insights by combining smart rendering, technology fingerprinting, and visual deduplication.
 
-## 🚀 Quick Start
+## 🚀 Key Capabilities
 
-### Installation
+### 🧠 Visual Intelligence
+- **Perceptual Hashing (pHash)**: Automatically groups visually identical hosts to eliminate report noise.
+- **Framework Fingerprinting**: Deep detection of modern SPA frameworks (React, Vue, Angular) and legacy technologies.
+- **Smart Interactions**: Automated detection and bypass of cookie consent overlays and common popups.
 
-### From Source
+### 🏗️ Enterprise Architecture
+- **Hexagonal Design**: Core business logic is strictly decoupled from infrastructure, ensuring long-term maintainability.
+- **Browser Pooling**: High-performance browser context management with thread-safe pooling.
+- **Resource Aware**: Adaptive concurrency and smart retries with exponential backoff.
 
+### 📊 Professional Outputs
+- **Interactive Multi-Report**: One-click generation of JSON, CSV, Markdown, and TXT reports.
+- **Web Dashboard 2.0**: A built-in surveillance dashboard to browse results in real-time.
+- **Incremental Scanning**: Intelligent logic that skips previously scanned targets to optimize resources.
+
+---
+
+## 🏗️ Architecture Visualization
+
+NetVista utilizes the **Ports & Adapters (Hexagonal)** pattern to ensure the core engine remains platform-agnostic.
+
+```mermaid
+graph TD
+    subgraph "External Actors"
+        CLI[User CLI]
+        Web[Web Dashboard]
+    end
+
+    subgraph "Services Layer"
+        ScannerService[Scanner Service]
+    end
+
+    subgraph "Ports (Interfaces)"
+        P_Prober[Prober Port]
+        P_Renderer[Renderer Port]
+        P_Reporter[Reporter Port]
+    end
+
+    subgraph "Infrastructure Adapters"
+        A_Prober[HTTP Core Prober]
+        A_Renderer[Playwright Browser]
+        A_Reporter[Multi-Format Reporter]
+    end
+
+    CLI --> ScannerService
+    ScannerService --> P_Prober
+    ScannerService --> P_Renderer
+    ScannerService --> P_Reporter
+    
+    P_Prober -.-> A_Prober
+    P_Renderer -.-> A_Renderer
+    P_Reporter -.-> A_Reporter
+    
+    A_Reporter --> Web
+```
+
+---
+
+## 🛠️ Installation
+
+### Prerequisites
+- [Go](https://go.dev/dl/) 1.21 or higher.
+- [Playwright for Go](https://github.com/playwright-community/playwright-go) (Dependencies installed automatically).
+
+### Setup
 ```bash
 git clone https://github.com/ismailtsdln/netvista
 cd netvista
 go build -o netvista cmd/netvista/main.go
 ```
 
-### Basic Scan
+---
+
+## 📖 Usage Guide
+
+### 📂 Port Scanning & Capture
+Pipe any list of URLs or IP addresses into NetVista.
 
 ```bash
-echo "example.com" | ./netvista scan -o my_recon
+# Basic scan
+echo "example.com" | ./netvista scan -o my_scan
+
+# Comprehensive scan with custom ports and concurrency
+cat targets.txt | ./netvista scan -p 80,443,8080 -c 10 -o reports/prod
 ```
 
-### Incremental Scan (Resuming)
-
+### 🔍 Specialized Input
+Parse Nmap XML files for visual verification.
 ```bash
-echo "example.com" | ./netvista scan -o my_recon  # Skips if already in results.json
+./netvista scan --nmap staging_network.xml -o staging_recon
 ```
 
-## 🏗️ Architecture (Hexagonal)
-
-NetVista v2.0 follows the Clean Architecture / Ports & Adapters pattern:
-
-- **Core/Domain**: Pure business logic and models.
-- **Core/Ports**: Interface definitions for infra dependencies (Prober, Renderer, Reporter).
-- **Core/Services**: Orchestration layer (The `ScannerService`).
-- **Infra/Adapters**: Implementations using external tools (Playwright, Net/HTTP, Go-Report).
-
-## 📊 Interaction Dashboard
-Launch the dashboard to explore your scan results visually:
+### 🖥️ Surveillance Dashboard
+Launch the interactive viewer to analyze your findings.
 ```bash
-./netvista serve -d my_recon
+./netvista serve -d reports/prod -p 9090
 ```
 
 ---
-Created with ❤️ by **İsmail Taşdelen**
+
+## ⚙️ Configuration (`netvista.yaml`)
+
+NetVista can be fine-tuned via a configuration file for enterprise deployments.
+
+```yaml
+ports: "top-100"          # Presets: top-100, top-1000, full
+concurrency: 20           # Number of simultaneous scanning threads
+max_browser_contexts: 10  # Max active Playwright contexts
+output: "./reports"       # Default output directory
+timeout: "10s"            # Global timeout per host
+proxy: ""                 # HTTP/SOCKS5 Proxy (optional)
+```
+
+---
+
+## 🛡️ Credits & Contribution
+
+Created and maintained by **İsmail Taşdelen**. Contributions are welcome via Pull Requests.
+
+---
+*Generated by NetVista Engine - Empowering Reconnaissance.*
