@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ismailtsdln/netvista/internal/engine"
 	"github.com/ismailtsdln/netvista/internal/plugins"
@@ -43,6 +44,12 @@ func main() {
 	case "scan":
 		scanCmd.Parse(os.Args[2:])
 
+		d, err := time.ParseDuration(*timeout)
+		if err != nil {
+			fmt.Printf("Invalid timeout: %v\n", err)
+			os.Exit(1)
+		}
+
 		// Parse headers
 		customHeaders := make(map[string]string)
 		if *headers != "" {
@@ -59,16 +66,17 @@ func main() {
 		e := engine.NewEngine(*concurrency, p)
 
 		pm := plugins.NewPluginManager()
-		pm.Register(&plugins.FingerprintPlugin{})
+		pm.Register(plugins.NewFingerprintPlugin())
 		pm.Register(plugins.NewTakeoverPlugin())
 
 		var targets []string
+		var terr error
 
 		if *nmapFile != "" {
 			fmt.Printf("Parsing Nmap XML: %s\n", *nmapFile)
-			targets, err = utils.ParseNmapXML(*nmapFile)
-			if err != nil {
-				fmt.Printf("Error parsing Nmap XML: %v\n", err)
+			targets, terr = utils.ParseNmapXML(*nmapFile)
+			if terr != nil {
+				fmt.Printf("Error parsing Nmap XML: %v\n", terr)
 				os.Exit(1)
 			}
 		} else {
