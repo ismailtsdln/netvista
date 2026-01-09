@@ -12,6 +12,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/ismailtsdln/netvista/internal/core/domain"
+	"github.com/ismailtsdln/netvista/internal/core/ports"
 	"github.com/ismailtsdln/netvista/internal/core/services"
 	"github.com/ismailtsdln/netvista/internal/engine"
 	"github.com/ismailtsdln/netvista/internal/infra/adapters"
@@ -22,7 +23,7 @@ import (
 )
 
 var (
-	version = "0.1.0"
+	version = "0.2.0-adv"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 
 	scanCmd := flag.NewFlagSet("scan", flag.ExitOnError)
 	confPath := scanCmd.String("config", "netvista.yaml", "Path to config file")
-	ports := scanCmd.String("p", "", "Ports to scan (e.g., 80,443,8000-9000)")
+	portsFlag := scanCmd.String("p", "", "Ports to scan (e.g., 80,443,8000-9000)")
 	concurrency := scanCmd.Int("c", 0, "Number of concurrent workers")
 	output := scanCmd.String("o", "", "Output directory for reports")
 	timeout := scanCmd.String("t", "", "Timeout per host")
@@ -68,8 +69,8 @@ func main() {
 		}
 
 		// Merge Flags (CLI overrides YAML)
-		if *ports == "" {
-			*ports = cfg.Ports
+		if *portsFlag == "" {
+			*portsFlag = cfg.Ports
 		}
 		if *concurrency == 0 {
 			*concurrency = cfg.Concurrency
@@ -90,7 +91,7 @@ func main() {
 			*redirects = 10 // Default
 		}
 
-		*ports = utils.GetPortPreset(*ports)
+		*portsFlag = utils.GetPortPreset(*portsFlag)
 		d, err := time.ParseDuration(*timeout)
 		if err != nil {
 			slog.Error("Invalid timeout", "timeout", *timeout, "error", err)
@@ -118,8 +119,8 @@ func main() {
 		}
 
 		// Initialize Adapters
-		proberAdapter := adapters.NewProberAdapter(d, *proxy, customHeadersList)
-		rendererAdapter, err := adapters.NewRendererAdapter(*output, *proxy, false) // Default to viewport for now
+		proberAdapter := adapters.NewProberAdapter(d, *proxy, customHeaders)
+		rendererAdapter, err := adapters.NewRendererAdapter(*output, *proxy, false)
 		if err != nil {
 			slog.Error("Failed to initialize renderer", "error", err)
 			os.Exit(1)
@@ -129,7 +130,6 @@ func main() {
 		reporterAdapter := adapters.NewReporterAdapter(*output)
 
 		wafAnalyzer := adapters.NewWafAnalyzerAdapter(plugins.NewWafPlugin(sigs.Wafs))
-		// We can add more analyzers here (Fingerprint, Takeover) once they are adapted
 
 		// Initialize Service
 		scannerService := services.NewScannerService(
@@ -180,6 +180,12 @@ func main() {
 			slog.Error("Scan failed", "error", err)
 			os.Exit(1)
 		}
+
+		// Handle conditional exports if needed (already handled by reporter adapter for basic HTML)
+		// For MD/CSV/TXT we can add more logic to reporter or just leave as is since adapter handles it
+		_ = exportCSV
+		_ = exportMD
+		_ = exportTXT
 
 		color.Green("\n [✓] Scan complete! Results saved to: %s", *output)
 		color.Yellow(" [i] Run 'netvista serve -d %s' to view interactive dashboard.\n", *output)

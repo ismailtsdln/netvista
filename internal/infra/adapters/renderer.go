@@ -6,6 +6,7 @@ import (
 
 	"github.com/ismailtsdln/netvista/internal/core/domain"
 	"github.com/ismailtsdln/netvista/internal/screenshot"
+	"github.com/ismailtsdln/netvista/pkg/utils"
 )
 
 // RendererAdapter wraps the existing screenshot logic.
@@ -24,11 +25,13 @@ func NewRendererAdapter(outputPath string, proxy string, fullPage bool) (*Render
 
 // Render captures a screenshot and returns the path and pHash.
 func (a *RendererAdapter) Render(ctx context.Context, target domain.Target) (string, string, error) {
-	res, err := a.c.Capture(ctx, target.URL)
+	// Clean filename for filesystem compatibility
+	filename := fmt.Sprintf("%s.png", utils.SanitizeFilename(target.URL))
+	res, err := a.c.Capture(ctx, target.URL, filename)
 	if err != nil {
 		return "", "", err
 	}
-	return res.Screenshot, res.PHash, nil
+	return res.Path, res.PHash, nil
 }
 
 // Close releases browser resources.

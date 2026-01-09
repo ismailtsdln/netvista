@@ -21,10 +21,10 @@ func NewProberAdapter(timeout time.Duration, proxy string, headers map[string]st
 }
 
 // Probe extracts metadata from a target.
-func (a *ProberAdapter) Probe(ctx context.Context, target domain.Target) (*domain.Metadata, error) {
+func (a *ProberAdapter) Probe(ctx context.Context, target domain.Target) (*domain.Metadata, string, error) {
 	res, err := a.p.Probe(ctx, target.URL)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	return &domain.Metadata{
@@ -35,5 +35,5 @@ func (a *ProberAdapter) Probe(ctx context.Context, target domain.Target) (*domai
 		ContentLen: res.Metadata.ContentLen,
 		Timestamp:  res.Metadata.Timestamp,
 		Redirects:  res.Metadata.Redirects,
-	}, nil
+	}, res.URL, nil
 }

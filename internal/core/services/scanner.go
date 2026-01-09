@@ -101,7 +101,7 @@ func (s *ScannerService) processTarget(ctx context.Context, t domain.Target) dom
 	}
 
 	// 1. Probe
-	metadata, err := s.prober.Probe(ctx, t)
+	metadata, resolvedURL, err := s.prober.Probe(ctx, t)
 	if err != nil {
 		result.Error = fmt.Sprintf("probe failed: %v", err)
 		result.IsAlive = false
@@ -109,10 +109,11 @@ func (s *ScannerService) processTarget(ctx context.Context, t domain.Target) dom
 	}
 	result.Metadata = *metadata
 	result.IsAlive = true
+	result.Target.URL = resolvedURL // Update with final URL (scheme + redirects)
 
 	// 2. Render (Screenshot)
 	if s.renderer != nil {
-		path, phash, err := s.renderer.Render(ctx, t)
+		path, phash, err := s.renderer.Render(ctx, result.Target)
 		if err == nil {
 			result.Screenshot = path
 			result.PHash = phash

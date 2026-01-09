@@ -8,7 +8,7 @@ import (
 
 // Prober defines the interface for initial HTTP discovery and metadata extraction.
 type Prober interface {
-	Probe(ctx context.Context, target domain.Target) (*domain.Metadata, error)
+	Probe(ctx context.Context, target domain.Target) (*domain.Metadata, string, error)
 }
 
 // Renderer defines the interface for capturing visual snapshots of targets.

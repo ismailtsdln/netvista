@@ -1,12 +1,24 @@
 package screenshot
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"bytes"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
+
+	"github.com/corona10/goimagehash"
 	"github.com/playwright-community/playwright-go"
 )
+
+type CaptureResult struct {
+	Path  string
+	PHash string
+}
 
 type Capturer struct {
 	PW        *playwright.Playwright
@@ -16,7 +28,6 @@ type Capturer struct {
 }
 
 func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
-
 	err := playwright.Install()
 	if err != nil {
 		return nil, fmt.Errorf("could not install playwright: %v", err)
@@ -46,13 +57,12 @@ func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
 	}, nil
 }
 
-func (c *Capturer) Capture(url string, filename string) ([]byte, error) {
+func (c *Capturer) Capture(ctx context.Context, url string, filename string) (*CaptureResult, error) {
 	opts := playwright.BrowserNewContextOptions{}
 	if c.ProxyURL != "" {
 		opts.Proxy = &playwright.Proxy{
 			Server: c.ProxyURL,
 		}
-
 	}
 
 	context, err := c.Browser.NewContext(opts)
@@ -66,14 +76,12 @@ func (c *Capturer) Capture(url string, filename string) ([]byte, error) {
 		return nil, err
 	}
 
-	if _, err = page.Goto(url); err != nil {
+	// Smart Rendering: Use NetworkIdle for JS-heavy apps
+	if _, err = page.Goto(url, playwright.PageGotoOptions{
+		WaitUntil: playwright.WaitUntilStateNetworkidle,
+	}); err != nil {
 		return nil, err
 	}
-
-	// Wait for network to be idle
-	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-		State: playwright.LoadStateNetworkidle,
-	})
 
 	path := filepath.Join(c.OutputDir, filename)
 	screenshotBytes, err := page.Screenshot(playwright.PageScreenshotOptions{
@@ -83,14 +91,32 @@ func (c *Capturer) Capture(url string, filename string) ([]byte, error) {
 		return nil, err
 	}
 
-	return screenshotBytes, nil
+	// Generate PHash
+	phash := ""
+	img, _, err := image.Decode(bytes.NewReader(screenshotBytes))
+	if err == nil {
+		hash, err := goimagehash.PerceptionHash(img)
+		if err == nil {
+			phash = hash.ToString()
+		}
+	}
+
+	return &CaptureResult{
+		Path:  path,
+		PHash: phash,
+	}, nil
 }
 
-func (c *Capturer) Close() {
+func (c *Capturer) Close() error {
+	var err error
 	if c.Browser != nil {
-		c.Browser.Close()
+		err = c.Browser.Close()
 	}
 	if c.PW != nil {
-		c.PW.Stop()
+		stopErr := c.PW.Stop()
+		if err == nil {
+			err = stopErr
+		}
 	}
+	return err
 }

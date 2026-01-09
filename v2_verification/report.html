@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NetVista Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --accent: #38bdf8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+        }
+        header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 1.5rem;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            color: var(--accent);
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: #1e293b;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+        }
+        .search-input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            flex: 1;
+            min-width: 250px;
+        }
+        .filter-select {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+        .cluster {
+            margin-bottom: 4rem;
+        }
+        .cluster-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            border-left: 4px solid var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .cluster-count {
+            background: #334155;
+            padding: 0.2rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #334155;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        .card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            border-bottom: 1px solid #334155;
+            background: #000;
+            transition: opacity 0.3s;
+        }
+        .card:hover img {
+            opacity: 0.9;
+        }
+        .card-content {
+            padding: 1.25rem;
+            flex-grow: 1;
+        }
+        .card-title {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            word-break: break-all;
+            font-size: 1.1rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+        .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        
+        .metadata {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #334155;
+        }
+        .metadata-item {
+            margin-bottom: 0.4rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .metadata-label {
+            font-weight: 600;
+            color: #64748b;
+            min-width: 60px;
+        }
+        .tech-tag {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 0.1rem 0.5rem;
+            border-radius: 0.4rem;
+            font-size: 0.75rem;
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+            display: inline-block;
+        }
+        .header-title-main { color: #64748b; font-weight: 300; }
+        .header-subtitle { margin-top: 0.5rem; color: #94a3b8; }
+        .header-stats { text-align: right; }
+        .stats-count { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+        .stats-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; }
+        .status-badge-container { margin-bottom: 0.75rem; }
+        .phash-code { font-size: 0.7rem; color: var(--accent); }
+        .footer-info { text-align: center; margin-top: 2rem; color: #64748b; }
+        .footer-highlight { color: var(--accent); }
+        .clear-btn { margin-left: 1rem; color: var(--accent); background: none; border: 1px solid var(--accent); padding: 0.2rem 0.5rem; border-radius: 0.3rem; cursor: pointer; }
+        
+         
+        .header-logo-img { height: 50px; margin-bottom: 1rem; }
+        .theme-toggle-btn { margin-bottom: 0.5rem; }
+        
+         
+        .light-mode {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --accent: #2563eb;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+        }
+        .light-mode header, .light-mode .card, .light-mode .controls, .light-mode .search-input, .light-mode .filter-select {
+            border-color: #e2e8f0;
+        }
+        .light-mode .controls, .light-mode .search-input, .light-mode .filter-select {
+            background: #ffffff;
+            color: #0f172a;
+        }
+        .light-mode .cluster-header { border-left-color: #2563eb; }
+        .light-mode .tech-tag { background: rgba(37, 99, 235, 0.1); border-color: rgba(37, 99, 235, 0.2); }
+        
+        [x-cloak] { display: none !important; }
+    </style>
+
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body :class="{ 'light-mode': !darkMode }" x-data="{ 
+    search: '', 
+    statusFilter: 'all',
+    darkMode: true,
+    isVisible(url, title, status, tech) {
+        const matchesSearch = url.toLowerCase().includes(this.search.toLowerCase()) || 
+                             title.toLowerCase().includes(this.search.toLowerCase()) ||
+                             tech.toLowerCase().includes(this.search.toLowerCase());
+        const matchesStatus = this.statusFilter === 'all' || status.toString() === this.statusFilter;
+        return matchesSearch && matchesStatus;
+    },
+    clusterVisible(targets) {
+        return targets.some(t => this.isVisible(t.URL, t.Metadata.Title, t.Metadata.StatusCode, t.Metadata.Technology.join(' ')));
+    }
+}">
+
+    <header>
+        <div class="header-top">
+                <div class="header-logo">
+                    <img src="assets/logo.png" alt="NetVista Logo" class="header-logo-img">
+                    <h1 class="header-title">NetVista Intelligence Report</h1>
+                </div>
+            <div class="header-stats">
+                <button @click="darkMode = !darkMode" class="clear-btn theme-toggle-btn" x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'" aria-label="Toggle Dark/Light Mode"></button>
+                <div class="stats-count">1</div>
+                <div class="stats-label">Total Hosts</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <input type="text" x-model="search" placeholder="Search by URL, Title, or Technology..." class="search-input" aria-label="Search">
+            <select x-model="statusFilter" class="filter-select" aria-label="Status Code Filter">
+
+                <option value="all">All Status Codes</option>
+                <option value="200">200 OK</option>
+                <option value="403">403 Forbidden</option>
+                <option value="404">404 Not Found</option>
+                <option value="500">500 Inner Error</option>
+            </select>
+        </div>
+    </header>
+
+    
+    <div class="cluster" x-show="clusterVisible({URL:'https://example.com',Metadata:{Title:'Example Domain',StatusCode:200,Technology:['WAF:Cloudflare']}}])" x-cloak>
+        <div class="cluster-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"></path></svg>
+            Visual Cluster: https://example.com
+            <span class="cluster-count">1 hosts</span>
+        </div>
+        <div class="grid">
+            
+            <div class="card" x-show="isVisible('https://example.com', 'Example Domain', 200, 'WAF:Cloudflare ')" x-transition>
+                <a href="https://example.com" target="_blank" rel="noopener">
+                    <img src="./example_com.png" alt="Screenshot of https://example.com" onerror="this.src='https://placehold.co/600x400/1e293b/f1f5f9?text=No+Screenshot'">
+                </a>
+                <div class="card-content">
+                    <div class="card-title">https://example.com</div>
+                    <div class="status-badge-container">
+                        <span class="badge badge-success">
+                            HTTP 200
+                        </span>
+                    </div>
+
+                    <div>
+                        
+                        <span class="tech-tag">WAF:Cloudflare</span>
+                        
+                    </div>
+                    <div class="metadata">
+                        <div class="metadata-item"><span class="metadata-label">Title:</span> <span>Example Domain</span></div>
+                        <div class="metadata-item"><span class="metadata-label">PHash:</span> <code class="phash-code">p:bc3c3cc0c3c3c3e3</code></div>
+                        <div class="metadata-item"><span class="metadata-label">Time:</span> <span>2026-01-09 16:36:30</span></div>
+                    </div>
+
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    
+    <div x-show="search !== '' || statusFilter !== 'all'" class="footer-info" x-cloak>
+        Filtering results for "<span x-text="search" class="footer-highlight"></span>"
+        <button @click="search = ''; statusFilter = 'all';" class="clear-btn">Clear Filters</button>
+    </div>
+
+</body>
+</html>
