@@ -18,6 +18,8 @@ type ResponseMetadata struct {
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
 	Technology []string          `json:"technology"`
+	ContentLen int64             `json:"content_len"`
+	Redirects  []string          `json:"redirects"`
 	Timestamp  time.Time         `json:"timestamp"`
 }
 
