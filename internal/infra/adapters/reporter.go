@@ -13,11 +13,19 @@ import (
 // ReporterAdapter wraps the existing reporting logic.
 type ReporterAdapter struct {
 	outputPath string
+	enableCSV  bool
+	enableMD   bool
+	enableTXT  bool
 }
 
 // NewReporterAdapter creates a new reporter adapter.
-func NewReporterAdapter(outputPath string) *ReporterAdapter {
-	return &ReporterAdapter{outputPath: outputPath}
+func NewReporterAdapter(outputPath string, enableCSV, enableMD, enableTXT bool) *ReporterAdapter {
+	return &ReporterAdapter{
+		outputPath: outputPath,
+		enableCSV:  enableCSV,
+		enableMD:   enableMD,
+		enableTXT:  enableTXT,
+	}
 }
 
 // Report generates reports based on scan results.
@@ -47,16 +55,20 @@ func (a *ReporterAdapter) Report(ctx context.Context, results []domain.ScanResul
 	}
 
 	// 2. CSV Export
-	csvPath := filepath.Join(a.outputPath, "results.csv")
-	report.ExportCSV(legacyResults, csvPath) // Non-blocking/Best-effort
-
+	if a.enableCSV {
+		csvPath := filepath.Join(a.outputPath, "results.csv")
+		report.ExportCSV(legacyResults, csvPath) // Non-blocking/Best-effort
+	}
 	// 3. Markdown Export
-	mdPath := filepath.Join(a.outputPath, "results.md")
-	report.ExportMarkdown(legacyResults, mdPath)
-
+	if a.enableMD {
+		mdPath := filepath.Join(a.outputPath, "results.md")
+		report.ExportMarkdown(legacyResults, mdPath)
+	}
 	// 4. Text Export
-	txtPath := filepath.Join(a.outputPath, "urls.txt")
-	report.ExportText(legacyResults, txtPath)
+	if a.enableTXT {
+		txtPath := filepath.Join(a.outputPath, "urls.txt")
+		report.ExportText(legacyResults, txtPath)
+	}
 
 	// 5. HTML Export
 	templatePath := "web/templates/dashboard.html"

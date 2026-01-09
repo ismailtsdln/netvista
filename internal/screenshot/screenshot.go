@@ -33,7 +33,7 @@ type Capturer struct {
 	mu             sync.Mutex
 }
 
-func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
+func NewCapturer(outputDir string, proxyURL string, maxContexts int) (*Capturer, error) {
 	err := playwright.Install()
 	if err != nil {
 		return nil, fmt.Errorf("could not install playwright: %v", err)
@@ -60,7 +60,7 @@ func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
 		Browser:        browser,
 		OutputDir:      outputDir,
 		ProxyURL:       proxyURL,
-		maxContexts:    10,
+		maxContexts:    maxContexts,
 		activeContexts: 0,
 	}, nil
 }

@@ -15,8 +15,8 @@ type RendererAdapter struct {
 }
 
 // NewRendererAdapter creates a new renderer adapter.
-func NewRendererAdapter(outputPath string, proxy string, fullPage bool) (*RendererAdapter, error) {
-	c, err := screenshot.NewCapturer(outputPath, proxy)
+func NewRendererAdapter(outputPath string, proxy string, fullPage bool, maxContexts int) (*RendererAdapter, error) {
+	c, err := screenshot.NewCapturer(outputPath, proxy, maxContexts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize capturer: %w", err)
 	}

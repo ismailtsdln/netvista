@@ -7,20 +7,22 @@ import (
 )
 
 type Config struct {
-	Ports       string `yaml:"ports"`
-	Concurrency int    `yaml:"concurrency"`
-	Output      string `yaml:"output"`
-	Timeout     string `yaml:"timeout"`
-	Proxy       string `yaml:"proxy"`
-	Headers     string `yaml:"headers"`
+	Ports              string `yaml:"ports"`
+	Concurrency        int    `yaml:"concurrency"`
+	Output             string `yaml:"output"`
+	Timeout            string `yaml:"timeout"`
+	Proxy              string `yaml:"proxy"`
+	Headers            string `yaml:"headers"`
+	MaxBrowserContexts int    `yaml:"max_browser_contexts"`
 }
 
 func LoadConfig(path string) (*Config, error) {
 	config := &Config{
-		Ports:       "80,443",
-		Concurrency: 20,
-		Output:      "./out",
-		Timeout:     "5s",
+		Ports:              "80,443",
+		Concurrency:        20,
+		Output:             "./out",
+		Timeout:            "5s",
+		MaxBrowserContexts: 10,
 	}
 
 	if _, err := os.Stat(path); err == nil {

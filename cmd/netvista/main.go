@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	version = "0.2.0-adv"
+	version = "2.1.0-pro"
 )
 
 func main() {
@@ -66,6 +66,9 @@ func main() {
 	proxy := scanCmd.String("proxy", "", "Proxy URL (e.g., http://127.0.0.1:8080)")
 	headers := scanCmd.String("H", "", "Custom headers (e.g., \"User-Agent: NetVista, X-Scan: 1\")")
 	redirects := scanCmd.Int("max-redirects", 10, "Max redirects to follow")
+	exportCSV := scanCmd.Bool("csv", true, "Export to CSV")
+	exportMD := scanCmd.Bool("md", true, "Export to Markdown")
+	exportTXT := scanCmd.Bool("txt", true, "Export to Text (alive URLs)")
 	autoOpen := scanCmd.Bool("open", false, "Automatically open the HTML report")
 
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
@@ -163,14 +166,14 @@ func main() {
 
 		// Initialize Adapters
 		proberAdapter := adapters.NewProberAdapter(d, *proxy, customHeaders)
-		rendererAdapter, err := adapters.NewRendererAdapter(*output, *proxy, false)
+		rendererAdapter, err := adapters.NewRendererAdapter(*output, *proxy, false, cfg.MaxBrowserContexts)
 		if err != nil {
 			slog.Error("Failed to initialize renderer", "error", err)
 			os.Exit(1)
 		}
 		defer rendererAdapter.Close()
 
-		reporterAdapter := adapters.NewReporterAdapter(*output)
+		reporterAdapter := adapters.NewReporterAdapter(*output, *exportCSV, *exportMD, *exportTXT)
 
 		wafAnalyzer := adapters.NewWafAnalyzerAdapter(plugins.NewWafPlugin(sigs.Wafs))
 
