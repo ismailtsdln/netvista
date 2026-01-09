@@ -12,6 +12,7 @@
             --accent: #38bdf8;
             --success: #22c55e;
             --warning: #f59e0b;
+            --danger: #ef4444;
         }
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -23,129 +24,217 @@
         header {
             margin-bottom: 2rem;
             border-bottom: 1px solid #334155;
-            padding-bottom: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 1.5rem;
         }
         h1 {
             color: var(--accent);
             margin: 0;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: #1e293b;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+        }
+        .search-input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            flex: 1;
+            min-width: 250px;
+        }
+        .filter-select {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
         }
         .cluster {
-            margin-bottom: 3rem;
+            margin-bottom: 4rem;
         }
         .cluster-header {
             font-size: 1.25rem;
             font-weight: 700;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             padding-left: 1rem;
             border-left: 4px solid var(--accent);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
         .cluster-count {
             background: #334155;
-            padding: 0.1rem 0.6rem;
+            padding: 0.2rem 0.75rem;
             border-radius: 1rem;
             font-size: 0.875rem;
         }
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
         }
         .card {
             background: var(--card-bg);
-            border-radius: 0.75rem;
+            border-radius: 1rem;
             overflow: hidden;
             border: 1px solid #334155;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
         }
         .card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-8px);
             border-color: var(--accent);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
         }
         .card img {
             width: 100%;
-            height: 200px;
+            height: 220px;
             object-fit: cover;
             border-bottom: 1px solid #334155;
             background: #000;
+            transition: opacity 0.3s;
+        }
+        .card:hover img {
+            opacity: 0.9;
         }
         .card-content {
-            padding: 1rem;
+            padding: 1.25rem;
+            flex-grow: 1;
         }
         .card-title {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--accent);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             word-break: break-all;
+            font-size: 1.1rem;
         }
         .badge {
             display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.5rem;
             font-size: 0.75rem;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
             margin-right: 0.5rem;
         }
-        .badge-success { background: var(--success); color: white; }
-        .badge-warning { background: var(--warning); color: white; }
+        .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
         
         .metadata {
             font-size: 0.875rem;
             color: #94a3b8;
-            margin-top: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #334155;
+        }
+        .metadata-item {
+            margin-bottom: 0.4rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .metadata-label {
+            font-weight: 600;
+            color: #64748b;
+            min-width: 60px;
         }
         .tech-tag {
-            background: #334155;
-            padding: 0.1rem 0.4rem;
-            border-radius: 0.2rem;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 0.1rem 0.5rem;
+            border-radius: 0.4rem;
             font-size: 0.75rem;
-            margin-right: 0.2rem;
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+            display: inline-block;
         }
+        [x-cloak] { display: none !important; }
     </style>
-  </head>
-  <body>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="{ 
+    search: '', 
+    statusFilter: 'all',
+    isVisible(url, title, status, tech) {
+        const matchesSearch = url.toLowerCase().includes(this.search.toLowerCase()) || 
+                             title.toLowerCase().includes(this.search.toLowerCase()) ||
+                             tech.toLowerCase().includes(this.search.toLowerCase());
+        const matchesStatus = this.statusFilter === 'all' || status.toString() === this.statusFilter;
+        return matchesSearch && matchesStatus;
+    },
+    clusterVisible(targets) {
+        return targets.some(t => this.isVisible(t.URL, t.Metadata.Title, t.Metadata.StatusCode, t.Metadata.Technology.join(' ')));
+    }
+}">
     <header>
-        <div>
-            <h1>NetVista Visual Recon Dashboard</h1>
-            <p>Discovered Hosts & Visual Intelligence Clustering</p>
+        <div class="header-top">
+            <div>
+                <h1>NetVista <span style="color: #64748b; font-weight: 300;">Visual Recon</span></h1>
+                <p style="margin-top: 0.5rem; color: #94a3b8;">Interactive intelligence report for discovered network assets</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">{{len .Results}}</div>
+                <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em;">Total Hosts</div>
+            </div>
         </div>
-        <div class="metadata">
-            Total Results: {{len .Results}}
+        
+        <div class="controls">
+            <input type="text" x-model="search" placeholder="Search by URL, Title, or Technology..." class="search-input">
+            <select x-model="statusFilter" class="filter-select">
+                <option value="all">All Status Codes</option>
+                <option value="200">200 OK</option>
+                <option value="403">403 Forbidden</option>
+                <option value="404">404 Not Found</option>
+                <option value="500">500 Inner Error</option>
+            </select>
         </div>
     </header>
 
     {{range $key, $targets := .Grouped}}
-    <div class="cluster">
+    <div class="cluster" x-show="clusterVisible({{range $i, $t := $targets}}{{if $i}},{{end}}{URL:'{{$t.URL}}',Metadata:{Title:'{{$t.Metadata.Title}}',StatusCode:{{$t.Metadata.StatusCode}},Technology:[{{range $j, $v := $t.Metadata.Technology}}{{if $j}},{{end}}'{{$v}}'{{end}}]}}{{end}}])" x-cloak>
         <div class="cluster-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"></path></svg>
             Visual Cluster: {{$key}}
             <span class="cluster-count">{{len $targets}} hosts</span>
         </div>
         <div class="grid">
             {{range $targets}}
-            <div class="card">
+            <div class="card" x-show="isVisible('{{.URL}}', '{{.Metadata.Title}}', {{.Metadata.StatusCode}}, '{{range .Metadata.Technology}}{{.}} {{end}}')" x-transition>
                 <a href="{{.URL}}" target="_blank">
                     <img src="./{{.URL | sanitize}}.png" alt="Screenshot of {{.URL}}" onerror="this.src='https://placehold.co/600x400/1e293b/f1f5f9?text=No+Screenshot'">
                 </a>
                 <div class="card-content">
                     <div class="card-title">{{.URL}}</div>
-                    <div>
-                        <span class="badge {{if eq .Metadata.StatusCode 200}}badge-success{{else}}badge-warning{{end}}">
+                    <div style="margin-bottom: 0.75rem;">
+                        <span class="badge {{if eq .Metadata.StatusCode 200}}badge-success{{else if ge .Metadata.StatusCode 400}}badge-danger{{else}}badge-warning{{end}}">
                             HTTP {{.Metadata.StatusCode}}
                         </span>
+                    </div>
+                    <div>
                         {{range .Metadata.Technology}}
                         <span class="tech-tag">{{.}}</span>
                         {{end}}
                     </div>
                     <div class="metadata">
-                        <div><strong>Title:</strong> {{.Metadata.Title}}</div>
-                        {{if .PHash}}<div><strong>PHash:</strong> {{.PHash}}</div>{{end}}
-                        <div><strong>Detected at:</strong> {{.Metadata.Timestamp.Format "2006-01-02 15:04:05"}}</div>
+                        <div class="metadata-item"><span class="metadata-label">Title:</span> <span>{{.Metadata.Title}}</span></div>
+                        {{if .PHash}}<div class="metadata-item"><span class="metadata-label">PHash:</span> <code style="font-size: 0.7rem; color: var(--accent);">{{.PHash}}</code></div>{{end}}
+                        <div class="metadata-item"><span class="metadata-label">Time:</span> <span>{{.Metadata.Timestamp.Format "2006-01-02 15:04:05"}}</span></div>
                     </div>
                 </div>
             </div>
@@ -153,5 +242,10 @@
         </div>
     </div>
     {{end}}
-  </body>
+    
+    <div x-show="search !== '' || statusFilter !== 'all'" style="text-align: center; margin-top: 2rem; color: #64748b;" x-cloak>
+        Filtering results for "<span x-text="search" style="color: var(--accent);"></span>"
+        <button @click="search = ''; statusFilter = 'all';" style="margin-left: 1rem; color: var(--accent); background: none; border: 1px solid var(--accent); padding: 0.2rem 0.5rem; border-radius: 0.3rem; cursor: pointer;">Clear Filters</button>
+    </div>
+</body>
 </html>

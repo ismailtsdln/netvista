@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ismailtsdln/netvista/internal/engine"
 	"github.com/ismailtsdln/netvista/internal/plugins"
@@ -33,6 +32,7 @@ func main() {
 	timeout := scanCmd.String("t", "5s", "Timeout per host")
 	nmapFile := scanCmd.String("nmap", "", "Nmap XML file to parse")
 	proxy := scanCmd.String("proxy", "", "Proxy URL (e.g., http://127.0.0.1:8080 or socks5://127.0.0.1:1080)")
+	headers := scanCmd.String("H", "", "Custom headers (e.g., 'Header1:Value1,Header2:Value2')")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Expected 'scan' subcommand")
@@ -43,13 +43,19 @@ func main() {
 	case "scan":
 		scanCmd.Parse(os.Args[2:])
 
-		d, err := time.ParseDuration(*timeout)
-		if err != nil {
-			fmt.Printf("Invalid timeout: %v\n", err)
-			os.Exit(1)
+		// Parse headers
+		customHeaders := make(map[string]string)
+		if *headers != "" {
+			parts := strings.Split(*headers, ",")
+			for _, part := range parts {
+				kv := strings.SplitN(part, ":", 2)
+				if len(kv) == 2 {
+					customHeaders[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+				}
+			}
 		}
 
-		p := prober.NewProber(d, *proxy)
+		p := prober.NewProber(d, *proxy, customHeaders)
 		e := engine.NewEngine(*concurrency, p)
 
 		pm := plugins.NewPluginManager()
@@ -85,7 +91,8 @@ func main() {
 		// For now, we'll just log that we're using the specified ports if applicable
 		fmt.Printf("Starting scan on %d targets with ports [%s], concurrency: %d, output: %s\n", len(targets), *ports, *concurrency, *output)
 
-		cap, err := screenshot.NewCapturer(*output)
+		cap, err := screenshot.NewCapturer(*output, *proxy)
+
 		if err != nil {
 			fmt.Printf("Error initializing screenshot engine: %v\n", err)
 			os.Exit(1)
@@ -145,6 +152,14 @@ func main() {
 				fmt.Printf(" [!] Error generating HTML report: %v\n", err)
 			} else {
 				fmt.Printf(" [✓] HTML report generated: %s\n", htmlPath)
+			}
+
+			// Generate ZIP report
+			zipPath := filepath.Join(*output, "report.zip")
+			if err := report.CreateReportZip(*output, zipPath); err != nil {
+				fmt.Printf(" [!] Error generating ZIP: %v\n", err)
+			} else {
+				fmt.Printf(" [✓] ZIP report generated: %s\n", zipPath)
 			}
 		}
 

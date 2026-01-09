@@ -50,8 +50,9 @@ func (c *Capturer) Capture(url string, filename string) ([]byte, error) {
 	opts := playwright.BrowserNewContextOptions{}
 	if c.ProxyURL != "" {
 		opts.Proxy = &playwright.Proxy{
-			Server: playwright.String(c.ProxyURL),
+			Server: c.ProxyURL,
 		}
+
 	}
 
 	context, err := c.Browser.NewContext(opts)

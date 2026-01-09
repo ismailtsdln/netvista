@@ -13,12 +13,13 @@ import (
 )
 
 type Prober struct {
-	Client   *http.Client
-	Timeout  time.Duration
-	ProxyURL string
+	Client        *http.Client
+	Timeout       time.Duration
+	ProxyURL      string
+	CustomHeaders map[string]string
 }
 
-func NewProber(timeout time.Duration, proxyURL string) *Prober {
+func NewProber(timeout time.Duration, proxyURL string, customHeaders map[string]string) *Prober {
 	transport := &http.Transport{}
 	if proxyURL != "" {
 		proxy, err := url.Parse(proxyURL)
@@ -38,8 +39,9 @@ func NewProber(timeout time.Duration, proxyURL string) *Prober {
 				return nil
 			},
 		},
-		Timeout:  timeout,
-		ProxyURL: proxyURL,
+		Timeout:       timeout,
+		ProxyURL:      proxyURL,
+		CustomHeaders: customHeaders,
 	}
 }
 
@@ -63,7 +65,12 @@ func (p *Prober) probeURL(ctx context.Context, targetURL string) (*models.Target
 
 	req.Header.Set("User-Agent", "NetVista/0.1.0 (Visual Recon Tool)")
 
+	for k, v := range p.CustomHeaders {
+		req.Header.Set(k, v)
+	}
+
 	resp, err := p.Client.Do(req)
+
 	if err != nil {
 		return nil, err
 	}
