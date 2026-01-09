@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/ismailtsdln/netvista/internal/screenshot"
 	"github.com/ismailtsdln/netvista/pkg/models"
+	"github.com/ismailtsdln/netvista/web"
 )
 
 type ReportData struct {
@@ -26,21 +28,30 @@ func GenerateHTML(results []models.Target, templatePath string, outputPath strin
 	os.MkdirAll(assetsDir, 0755)
 
 	// Copy logo
-	logoSrc := filepath.Join("web", "assets", "logo.png")
 	logoDst := filepath.Join(assetsDir, "logo.png")
-	if _, err := os.Stat(logoSrc); err == nil {
-		s, err := os.Open(logoSrc)
-		if err == nil {
-			defer s.Close()
-			d, err := os.Create(logoDst)
+
+	// Try to get logo from embedded first as it's more reliable for installed binaries
+	logoData, err := fs.ReadFile(web.AssetsFS, "assets/logo.png")
+	if err == nil {
+		os.WriteFile(logoDst, logoData, 0644)
+	} else {
+		// Fallback to local file
+		logoSrc := filepath.Join("web", "assets", "logo.png")
+		if _, err := os.Stat(logoSrc); err == nil {
+			s, err := os.Open(logoSrc)
 			if err == nil {
-				defer d.Close()
-				io.Copy(d, s)
+				defer s.Close()
+				d, err := os.Create(logoDst)
+				if err == nil {
+					defer d.Close()
+					io.Copy(d, s)
+				}
 			}
 		}
 	}
 
 	start := time.Now()
+	// ...
 
 	// Simple clustering
 	grouped := make(map[string][]models.Target)
@@ -74,9 +85,11 @@ func GenerateHTML(results []models.Target, templatePath string, outputPath strin
 	}
 	slog.Info("Clustering complete", "duration", time.Since(start), "groups", len(grouped))
 
-	tmpl, err := template.New(filepath.Base(templatePath)).Funcs(template.FuncMap{
+	var tmpl *template.Template
+	var terr error
+
+	funcMap := template.FuncMap{
 		"sanitize": func(s string) string {
-			// Basic sanitization similar to utils.SanitizeFilename
 			s = strings.Replace(s, "https://", "", 1)
 			s = strings.Replace(s, "http://", "", 1)
 			s = strings.ReplaceAll(s, "/", "_")
@@ -84,12 +97,23 @@ func GenerateHTML(results []models.Target, templatePath string, outputPath strin
 			s = strings.ReplaceAll(s, ".", "_")
 			return strings.Trim(s, "_")
 		},
-	}).ParseFiles(templatePath)
-	if err != nil {
-		return err
+	}
+
+	// Try local template first
+	if _, err := os.Stat(templatePath); err == nil {
+		tmpl, terr = template.New(filepath.Base(templatePath)).Funcs(funcMap).ParseFiles(templatePath)
+	} else {
+		// Fallback to embedded
+		embeddedPath := filepath.Join("templates", filepath.Base(templatePath))
+		tmpl, terr = template.New(filepath.Base(templatePath)).Funcs(funcMap).ParseFS(web.AssetsFS, embeddedPath)
+	}
+
+	if terr != nil {
+		return terr
 	}
 
 	f, err := os.Create(outputPath)
+
 	if err != nil {
 		return err
 	}

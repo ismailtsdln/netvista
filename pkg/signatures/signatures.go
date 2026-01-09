@@ -1,10 +1,14 @@
 package signatures
 
 import (
+	"embed"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed signatures.yaml
+var DefaultSignaturesFS embed.FS
 
 type FingerprintSig struct {
 	Name   string            `yaml:"name"`
@@ -31,9 +35,19 @@ type Signatures struct {
 }
 
 func LoadSignatures(path string) (*Signatures, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+	var data []byte
+	var err error
+
+	if path != "" {
+		data, err = os.ReadFile(path)
+	}
+
+	if err != nil || path == "" {
+		// Fallback to embedded
+		data, err = DefaultSignaturesFS.ReadFile("signatures.yaml")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var sigs Signatures

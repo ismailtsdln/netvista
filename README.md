@@ -25,17 +25,18 @@
 
 ### Installation
 
+#### Install via Go (Recommended)
 ```bash
-# Clone the repository
-git clone https://github.com/ismailtsdln/netvista.git
+go install github.com/ismailtsdln/netvista/cmd/netvista@latest
+```
+
+#### From Source
+```bash
+git clone https://github.com/ismailtsdln/netvista
 cd netvista
-
-# Install dependencies
-go mod download
-
-# Build the binary
 go build -o netvista cmd/netvista/main.go
 ```
+
 
 ### Usage
 
