@@ -7,14 +7,47 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ismailtsdln/netvista/internal/screenshot"
 	"github.com/ismailtsdln/netvista/pkg/models"
 )
 
 type ReportData struct {
 	Results []models.Target
+	Grouped map[string][]models.Target
 }
 
 func GenerateHTML(results []models.Target, templatePath string, outputPath string) error {
+	// Simple clustering
+	grouped := make(map[string][]models.Target)
+	processed := make(map[string]bool)
+
+	for i, r1 := range results {
+		if processed[r1.URL] {
+			continue
+		}
+
+		groupKey := r1.URL
+		grouped[groupKey] = append(grouped[groupKey], r1)
+		processed[r1.URL] = true
+
+		if r1.PHash == "" {
+			continue
+		}
+
+		for j := i + 1; j < len(results); j++ {
+			r2 := results[j]
+			if processed[r2.URL] || r2.PHash == "" {
+				continue
+			}
+
+			dist, err := screenshot.HammingDistance(r1.PHash, r2.PHash)
+			if err == nil && dist < 8 { // Threshold for similarity
+				grouped[groupKey] = append(grouped[groupKey], r2)
+				processed[r2.URL] = true
+			}
+		}
+	}
+
 	tmpl, err := template.New(filepath.Base(templatePath)).Funcs(template.FuncMap{
 		"sanitize": func(s string) string {
 			// Basic sanitization similar to utils.SanitizeFilename
@@ -38,6 +71,7 @@ func GenerateHTML(results []models.Target, templatePath string, outputPath strin
 
 	data := ReportData{
 		Results: results,
+		Grouped: grouped,
 	}
 
 	return tmpl.Execute(f, data)

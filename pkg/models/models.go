@@ -8,6 +8,7 @@ type Target struct {
 	Port     int
 	URL      string
 	IsAlive  bool
+	PHash    string
 	Metadata ResponseMetadata
 }
 

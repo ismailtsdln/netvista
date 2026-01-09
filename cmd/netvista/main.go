@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ismailtsdln/netvista/internal/engine"
@@ -97,15 +98,29 @@ func main() {
 		for res := range results {
 			fmt.Printf("[+] Found: %s (%d)\n", res.URL, res.Metadata.StatusCode)
 
+			// Run plugins
+			pm.RunAll(res)
+			if len(res.Metadata.Technology) > 0 {
+				fmt.Printf(" [i] Technologies: %s\n", strings.Join(res.Metadata.Technology, ", "))
+			}
+
 			// Hostname for filename
 			filename := fmt.Sprintf("%s.png", utils.SanitizeFilename(res.URL))
-			err := cap.Capture(res.URL, filename)
+			imgBytes, err := cap.Capture(res.URL, filename)
 			if err != nil {
 				fmt.Printf(" [!] Error capturing %s: %v\n", res.URL, err)
 			} else {
 				fmt.Printf(" [✓] Screenshot saved: %s\n", filename)
+
+				// Generate PHash
+				phash, err := screenshot.GeneratePHash(imgBytes)
+				if err == nil {
+					res.PHash = phash
+					fmt.Printf(" [i] PHash: %s\n", phash)
+				}
 			}
 			scanResults = append(scanResults, *res)
+
 		}
 
 		if len(scanResults) > 0 {

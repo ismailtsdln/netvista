@@ -43,20 +43,20 @@ func NewCapturer(outputDir string) (*Capturer, error) {
 	}, nil
 }
 
-func (c *Capturer) Capture(url string, filename string) error {
+func (c *Capturer) Capture(url string, filename string) ([]byte, error) {
 	context, err := c.Browser.NewContext()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer context.Close()
 
 	page, err := context.NewPage()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err = page.Goto(url); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Wait for network to be idle
@@ -65,13 +65,14 @@ func (c *Capturer) Capture(url string, filename string) error {
 	})
 
 	path := filepath.Join(c.OutputDir, filename)
-	if _, err = page.Screenshot(playwright.PageScreenshotOptions{
+	screenshotBytes, err := page.Screenshot(playwright.PageScreenshotOptions{
 		Path: playwright.String(path),
-	}); err != nil {
-		return err
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return screenshotBytes, nil
 }
 
 func (c *Capturer) Close() {
