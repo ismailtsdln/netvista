@@ -3,6 +3,7 @@ package report
 import (
 	"encoding/json"
 	"html/template"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -19,7 +20,28 @@ type ReportData struct {
 }
 
 func GenerateHTML(results []models.Target, templatePath string, outputPath string) error {
+	// Ensure assets directory exists in output
+	outDir := filepath.Dir(outputPath)
+	assetsDir := filepath.Join(outDir, "assets")
+	os.MkdirAll(assetsDir, 0755)
+
+	// Copy logo
+	logoSrc := filepath.Join("web", "assets", "logo.png")
+	logoDst := filepath.Join(assetsDir, "logo.png")
+	if _, err := os.Stat(logoSrc); err == nil {
+		s, err := os.Open(logoSrc)
+		if err == nil {
+			defer s.Close()
+			d, err := os.Create(logoDst)
+			if err == nil {
+				defer d.Close()
+				io.Copy(d, s)
+			}
+		}
+	}
+
 	start := time.Now()
+
 	// Simple clustering
 	grouped := make(map[string][]models.Target)
 	processed := make(map[string]bool)

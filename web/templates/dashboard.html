@@ -218,10 +218,10 @@
 
     <header>
         <div class="header-top">
-            <div>
-                <h1>NetVista <span class="header-title-main">Visual Recon</span></h1>
-                <p class="header-subtitle">Interactive intelligence report for discovered network assets</p>
-            </div>
+                <div class="header-logo">
+                    <img src="assets/logo.png" alt="NetVista Logo" style="height: 50px; margin-bottom: 1rem;">
+                    <h1 class="header-title">NetVista Intelligence Report</h1>
+                </div>
             <div class="header-stats">
                 <button @click="darkMode = !darkMode" class="clear-btn" style="margin-bottom: 0.5rem;" x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'" aria-label="Toggle Dark/Light Mode"></button>
                 <div class="stats-count">{{len .Results}}</div>

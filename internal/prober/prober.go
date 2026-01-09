@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -13,14 +14,23 @@ import (
 	"github.com/ismailtsdln/netvista/pkg/models"
 )
 
+var userAgents = []string{
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+}
+
 type Prober struct {
 	Client        *http.Client
 	Timeout       time.Duration
 	ProxyURL      string
 	CustomHeaders map[string]string
+	Redirects     int
 }
 
-func NewProber(timeout time.Duration, proxyURL string, customHeaders map[string]string) *Prober {
+func NewProber(timeout time.Duration, proxyURL string, customHeaders map[string]string, redirects int) *Prober {
 	transport := &http.Transport{}
 	if proxyURL != "" {
 		proxy, err := url.Parse(proxyURL)
@@ -34,8 +44,8 @@ func NewProber(timeout time.Duration, proxyURL string, customHeaders map[string]
 			Timeout:   timeout,
 			Transport: transport,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) >= 10 {
-					return fmt.Errorf("stopped after 10 redirects")
+				if len(via) >= redirects {
+					return fmt.Errorf("stopped after %d redirects", redirects)
 				}
 				return nil
 			},
@@ -43,7 +53,12 @@ func NewProber(timeout time.Duration, proxyURL string, customHeaders map[string]
 		Timeout:       timeout,
 		ProxyURL:      proxyURL,
 		CustomHeaders: customHeaders,
+		Redirects:     redirects,
 	}
+}
+
+func (p *Prober) getRandomUA() string {
+	return userAgents[rand.Intn(len(userAgents))]
 }
 
 func (p *Prober) Probe(ctx context.Context, target string) (*models.Target, error) {
@@ -64,7 +79,7 @@ func (p *Prober) probeURL(ctx context.Context, targetURL string) (*models.Target
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "NetVista/0.1.0 (Visual Recon Tool)")
+	req.Header.Set("User-Agent", p.getRandomUA())
 
 	for k, v := range p.CustomHeaders {
 		req.Header.Set(k, v)
@@ -101,6 +116,7 @@ func (p *Prober) probeURL(ctx context.Context, targetURL string) (*models.Target
 		StatusCode: resp.StatusCode,
 		Headers:    make(map[string]string),
 		Body:       body,
+		Timestamp:  time.Now(),
 	}
 
 	for k, v := range resp.Header {

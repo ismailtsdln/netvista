@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Target struct {
 	Host     string
 	Scheme   string
@@ -16,6 +18,7 @@ type ResponseMetadata struct {
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
 	Technology []string          `json:"technology"`
+	Timestamp  time.Time         `json:"timestamp"`
 }
 
 type ScanResult struct {

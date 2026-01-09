@@ -5,11 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/ismailtsdln/netvista/internal/engine"
 	"github.com/ismailtsdln/netvista/internal/plugins"
 	"github.com/ismailtsdln/netvista/internal/prober"
@@ -19,6 +21,7 @@ import (
 	"github.com/ismailtsdln/netvista/pkg/models"
 	"github.com/ismailtsdln/netvista/pkg/signatures"
 	"github.com/ismailtsdln/netvista/pkg/utils"
+	"github.com/schollz/progressbar/v3"
 )
 
 var (
@@ -31,7 +34,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	banner := utils.GetBanner(version)
-	fmt.Println(banner)
+	color.Cyan(banner)
 
 	scanCmd := flag.NewFlagSet("scan", flag.ExitOnError)
 	confPath := scanCmd.String("config", "netvista.yaml", "Path to config file")
@@ -42,9 +45,17 @@ func main() {
 	nmapFile := scanCmd.String("nmap", "", "Nmap XML file to parse")
 	proxy := scanCmd.String("proxy", "", "Proxy URL")
 	headers := scanCmd.String("H", "", "Custom headers")
+	redirects := scanCmd.Int("max-redirects", 0, "Max redirects to follow")
+	exportCSV := scanCmd.Bool("csv", false, "Export to CSV")
+	exportMD := scanCmd.Bool("md", false, "Export to Markdown")
+	exportTXT := scanCmd.Bool("txt", false, "Export to Text (alive URLs)")
+
+	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
+	serveDir := serveCmd.String("d", "reports", "Directory to serve")
+	servePort := serveCmd.String("p", "8080", "Port to serve on")
 
 	if len(os.Args) < 2 {
-		fmt.Println("Expected 'scan' subcommand")
+		color.Red("Expected 'scan', 'serve' or 'version' subcommands")
 		os.Exit(1)
 	}
 
@@ -78,6 +89,12 @@ func main() {
 		if *headers == "" {
 			*headers = cfg.Headers
 		}
+		if *redirects == 0 {
+			*redirects = 10 // Default
+		}
+
+		// Handle port presets
+		*ports = utils.GetPortPreset(*ports)
 
 		d, err := time.ParseDuration(*timeout)
 		if err != nil {
@@ -107,12 +124,14 @@ func main() {
 			sigs = &signatures.Signatures{}
 		}
 
-		p := prober.NewProber(d, *proxy, customHeaders)
+		p := prober.NewProber(d, *proxy, customHeaders, *redirects)
+
 		e := engine.NewEngine(*concurrency, p)
 
 		pm := plugins.NewPluginManager()
 		pm.Register(plugins.NewFingerprintPlugin(sigs.Fingerprints))
 		pm.Register(plugins.NewTakeoverPlugin(sigs.Takeovers))
+		pm.Register(plugins.NewWafPlugin(sigs.Wafs))
 
 		var targets []string
 		var terr error
@@ -140,6 +159,8 @@ func main() {
 			os.Exit(0)
 		}
 
+		targets = utils.ResolveTargets(targets)
+
 		slog.Info("Starting scan",
 			"targets", len(targets),
 			"ports", *ports,
@@ -153,12 +174,25 @@ func main() {
 		}
 		defer cap.Close()
 
+		bar := progressbar.NewOptions(len(targets),
+			progressbar.OptionSetDescription("Scanning"),
+			progressbar.OptionSetWidth(20),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[cyan]=[reset]",
+				SaucerHead:    "[cyan]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}),
+		)
+
 		ctx := context.Background()
 		results := e.Run(ctx, targets)
 
 		var scanResults []models.Target
 		for res := range results {
-			slog.Info("Found", "url", res.URL, "status", res.Metadata.StatusCode)
+			bar.Add(1)
+			// slog.Info("Found", "url", res.URL, "status", res.Metadata.StatusCode) // Reduce noise during progress bar
 
 			// Run plugins
 			pm.RunAll(res)
@@ -187,15 +221,43 @@ func main() {
 		if len(scanResults) > 0 {
 			slog.Info("Generating reports...")
 
+			// Resolve resolvedTargets for report generation if needed, but targets is enough
+
 			// Generate HTML
 			htmlPath := filepath.Join(*output, "report.html")
-			// We need a way to pass sanitize function to template
-			// For simplicity in this implementation, I'll update report.go or main.go to use a pre-sanitized name if needed
-			// Let's update models and report logic to handle this better
-
 			err = report.ExportJSON(scanResults, filepath.Join(*output, "results.json"))
 			if err != nil {
 				slog.Error("Error exporting JSON", "error", err)
+			}
+
+			// CSV Export
+			if *exportCSV {
+				csvPath := filepath.Join(*output, "results.csv")
+				if err := report.ExportCSV(scanResults, csvPath); err != nil {
+					slog.Error("Error exporting CSV", "error", err)
+				} else {
+					slog.Info("CSV report generated", "path", csvPath)
+				}
+			}
+
+			// Markdown Export
+			if *exportMD {
+				mdPath := filepath.Join(*output, "results.md")
+				if err := report.ExportMarkdown(scanResults, mdPath); err != nil {
+					slog.Error("Error exporting Markdown", "error", err)
+				} else {
+					slog.Info("Markdown report generated", "path", mdPath)
+				}
+			}
+
+			// Text Export
+			if *exportTXT {
+				txtPath := filepath.Join(*output, "urls.txt")
+				if err := report.ExportText(scanResults, txtPath); err != nil {
+					slog.Error("Error exporting Text", "error", err)
+				} else {
+					slog.Info("Text report generated", "path", txtPath)
+				}
 			}
 
 			// For HTML we need the template. We'll use a relative path for now.
@@ -214,12 +276,67 @@ func main() {
 			} else {
 				slog.Info("ZIP report generated", "path", zipPath)
 			}
+
+			// Final Summary Table
+			fmt.Println()
+			color.Cyan(" [📊] Scan Summary")
+			fmt.Println(" " + strings.Repeat("─", 100))
+			color.White(" %-40s | %-6s | %-30s | %-20s", "URL", "Status", "Title", "Technology")
+			fmt.Println(" " + strings.Repeat("─", 100))
+
+			for _, r := range scanResults {
+				statusStr := fmt.Sprintf("%d", r.Metadata.StatusCode)
+				if r.Metadata.StatusCode >= 400 {
+					statusStr = color.RedString("%d", r.Metadata.StatusCode)
+				} else if r.Metadata.StatusCode >= 200 && r.Metadata.StatusCode < 300 {
+					statusStr = color.GreenString("%d", r.Metadata.StatusCode)
+				} else {
+					statusStr = color.YellowString("%d", r.Metadata.StatusCode)
+				}
+
+				title := r.Metadata.Title
+				if len(title) > 30 {
+					title = title[:27] + "..."
+				}
+
+				url := r.URL
+				if len(url) > 40 {
+					url = url[:37] + "..."
+				}
+
+				techs := strings.Join(r.Metadata.Technology, ", ")
+				if len(techs) > 20 {
+					techs = techs[:17] + "..."
+				}
+
+				fmt.Printf(" %-40s | %-16s | %-30s | %-20s\n", url, statusStr, title, techs)
+			}
+			fmt.Println(" " + strings.Repeat("─", 100))
+
+			color.Green("\n [✓] Scan complete! Results saved to: %s", *output)
+			color.Yellow(" [i] Run 'netvista serve -d %s' to view interactive dashboard.\n", *output)
+		}
+
+	case "serve":
+		serveCmd.Parse(os.Args[2:])
+		absPath, _ := filepath.Abs(*serveDir)
+		color.Cyan("\n [▶] NetVista Serve Engine")
+		color.White(" ──────────────────────────────────────────────────")
+		color.Green(" [✓] Serving reports from: %s", absPath)
+		color.Green(" [●] Dashboard available at: http://localhost:%s", *servePort)
+		color.White(" ──────────────────────────────────────────────────")
+		color.Yellow(" [!] Press Ctrl+C to stop the server\n")
+
+		handler := http.FileServer(http.Dir(*serveDir))
+		if err := http.ListenAndServe(":"+*servePort, handler); err != nil {
+			slog.Error("Failed to start server", "error", err)
+			os.Exit(1)
 		}
 
 	case "version":
-		fmt.Printf("NetVista v%s\n", version)
+		color.Blue("NetVista v%s\n", version)
 	default:
-		fmt.Println("Expected 'scan' or 'version' subcommands")
+		color.Red("Unknown subcommand: %s\n", os.Args[1])
 		os.Exit(1)
 	}
 }

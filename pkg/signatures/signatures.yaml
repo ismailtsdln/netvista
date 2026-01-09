@@ -46,3 +46,30 @@ takeovers:
     fingerprint: "no such app"
   - name: "Azure"
     fingerprint: "404 Web Site not found"
+
+wafs:
+  - name: "Cloudflare"
+    header:
+      Server: "cloudflare"
+    body: "Ray ID"
+  - name: "Akamai"
+    header:
+      X-Akamai-Transformed: ""
+      Server: "AkamaiGHost"
+  - name: "AWS WAF"
+    header:
+      Server: "AWSALB"
+    body: "AWSALB"
+  - name: "ModSecurity"
+    header:
+      Server: "ModSecurity"
+    body: "ModSecurity"
+  - name: "Sucuri"
+    header:
+      X-Sucuri-ID: ""
+      Server: "Sucuri"
+  - name: "Imperva"
+    header:
+      X-Iinfo: ""
+      Server: "imperva"
+

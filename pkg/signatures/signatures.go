@@ -18,9 +18,16 @@ type TakeoverSig struct {
 	Fingerprint string `yaml:"fingerprint"`
 }
 
+type WafSig struct {
+	Name   string            `yaml:"name"`
+	Header map[string]string `yaml:"header"`
+	Body   string            `yaml:"body"`
+}
+
 type Signatures struct {
 	Fingerprints []FingerprintSig `yaml:"fingerprints"`
 	Takeovers    []TakeoverSig    `yaml:"takeovers"`
+	Wafs         []WafSig         `yaml:"wafs"`
 }
 
 func LoadSignatures(path string) (*Signatures, error) {
