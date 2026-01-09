@@ -23,18 +23,21 @@ func NewRendererAdapter(outputPath string, proxy string, fullPage bool) (*Render
 	return &RendererAdapter{c: c}, nil
 }
 
-// Render captures a screenshot and returns the path and pHash.
-func (a *RendererAdapter) Render(ctx context.Context, target domain.Target) (string, string, error) {
+// Render captures a screenshot and returns the path, pHash, and framework.
+func (a *RendererAdapter) Render(ctx context.Context, target domain.Target) (string, string, string, error) {
 	// Clean filename for filesystem compatibility
 	filename := fmt.Sprintf("%s.png", utils.SanitizeFilename(target.URL))
 	res, err := a.c.Capture(ctx, target.URL, filename)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	return res.Path, res.PHash, nil
+	return res.Path, res.PHash, res.Framework, nil
 }
 
 // Close releases browser resources.
 func (a *RendererAdapter) Close() error {
-	return a.c.Close()
+	if a.c != nil {
+		return a.c.Close()
+	}
+	return nil
 }

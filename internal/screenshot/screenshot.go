@@ -1,23 +1,24 @@
 package screenshot
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-
-	"bytes"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/corona10/goimagehash"
 	"github.com/playwright-community/playwright-go"
 )
 
 type CaptureResult struct {
-	Path  string
-	PHash string
+	Path      string
+	PHash     string
+	Framework string
 }
 
 type Capturer struct {
@@ -65,13 +66,13 @@ func (c *Capturer) Capture(ctx context.Context, url string, filename string) (*C
 		}
 	}
 
-	context, err := c.Browser.NewContext(opts)
+	playContext, err := c.Browser.NewContext(opts)
 	if err != nil {
 		return nil, err
 	}
-	defer context.Close()
+	defer playContext.Close()
 
-	page, err := context.NewPage()
+	page, err := playContext.NewPage()
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +83,9 @@ func (c *Capturer) Capture(ctx context.Context, url string, filename string) (*C
 	}); err != nil {
 		return nil, err
 	}
+
+	// SPA Detection & Cookie Consent Bypass
+	c.handleSmartInteractions(page)
 
 	path := filepath.Join(c.OutputDir, filename)
 	screenshotBytes, err := page.Screenshot(playwright.PageScreenshotOptions{
@@ -102,9 +106,47 @@ func (c *Capturer) Capture(ctx context.Context, url string, filename string) (*C
 	}
 
 	return &CaptureResult{
-		Path:  path,
-		PHash: phash,
+		Path:      path,
+		PHash:     phash,
+		Framework: framework,
 	}, nil
+}
+
+func (c *Capturer) handleSmartInteractions(page playwright.Page) string {
+	// 1. Framework Detection
+	content, _ := page.Content()
+	framework := "Static"
+	if strings.Contains(content, "id=\"root\"") || strings.Contains(content, "_reactRootContainer") {
+		framework = "React"
+	} else if strings.Contains(content, "id=\"app\"") || strings.Contains(content, "data-v-") {
+		framework = "Vue"
+	}
+
+	// 2. Cookie Consent Auto-Click (Best-effort)
+	selectors := []string{
+		"button[id*=cookie]", "button[class*=cookie]", "button[id*=consent]",
+		"button[class*=consent]", "button[id*=accept]", "button[class*=accept]",
+		"#accept-cookies", ".accept-cookies", "#ok-cookie",
+	}
+
+	for _, sel := range selectors {
+		elements, err := page.QuerySelectorAll(sel)
+		if err == nil && len(elements) > 0 {
+			for _, el := range elements {
+				visible, _ := el.IsVisible()
+				if visible {
+					text, _ := el.TextContent()
+					text = strings.ToLower(text)
+					if strings.Contains(text, "accept") || strings.Contains(text, "ok") || strings.Contains(text, "allow") || strings.Contains(text, "agree") {
+						el.Click()
+						// Small wait for overlay to disappear
+						page.WaitForTimeout(500)
+						break
+					}
+				}
+			}
+		}
+	}
 }
 
 func (c *Capturer) Close() error {

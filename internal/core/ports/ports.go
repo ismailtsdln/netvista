@@ -13,23 +13,23 @@ type Prober interface {
 
 // Renderer defines the interface for capturing visual snapshots of targets.
 type Renderer interface {
-	Render(ctx context.Context, target domain.Target) (string, string, error) // Returns screenshot path and pHash
+	Render(ctx context.Context, target domain.Target) (string, string, string, error)
 	Close() error
 }
 
-// Analyzer defines the interface for post-scan analysis (Fingerprinting, WAF detection).
+// Analyzer defines the interface for analyzing targets for specific attributes (WAF, Fingerprint, etc.).
 type Analyzer interface {
 	Analyze(ctx context.Context, result *domain.ScanResult) error
 	Name() string
 }
 
-// Reporter defines the interface for generating output files (HTML, JSON, CSV).
+// Reporter defines the interface for generating scan reports.
 type Reporter interface {
-	Write(results []domain.ScanResult) error
+	Report(ctx context.Context, results []domain.ScanResult) error
 }
 
-// Storage defines the interface for persistent data (Signatures, Config).
+// Storage defines the interface for persisting scan data.
 type Storage interface {
-	LoadSignatures() ([]interface{}, error) // Generic for now
-	SaveResult(result domain.ScanResult) error
+	Save(ctx context.Context, result domain.ScanResult) error
+	Load(ctx context.Context, id string) (*domain.ScanResult, error)
 }
