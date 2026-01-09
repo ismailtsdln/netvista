@@ -164,13 +164,46 @@
             margin-bottom: 0.3rem;
             display: inline-block;
         }
+        .header-title-main { color: #64748b; font-weight: 300; }
+        .header-subtitle { margin-top: 0.5rem; color: #94a3b8; }
+        .header-stats { text-align: right; }
+        .stats-count { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+        .stats-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; }
+        .status-badge-container { margin-bottom: 0.75rem; }
+        .phash-code { font-size: 0.7rem; color: var(--accent); }
+        .footer-info { text-align: center; margin-top: 2rem; color: #64748b; }
+        .footer-highlight { color: var(--accent); }
+        .clear-btn { margin-left: 1rem; color: var(--accent); background: none; border: 1px solid var(--accent); padding: 0.2rem 0.5rem; border-radius: 0.3rem; cursor: pointer; }
+        
+        /* Dark/Light mode support */
+        .light-mode {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --accent: #2563eb;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+        }
+        .light-mode header, .light-mode .card, .light-mode .controls, .light-mode .search-input, .light-mode .filter-select {
+            border-color: #e2e8f0;
+        }
+        .light-mode .controls, .light-mode .search-input, .light-mode .filter-select {
+            background: #ffffff;
+            color: #0f172a;
+        }
+        .light-mode .cluster-header { border-left-color: #2563eb; }
+        .light-mode .tech-tag { background: rgba(37, 99, 235, 0.1); border-color: rgba(37, 99, 235, 0.2); }
+        
         [x-cloak] { display: none !important; }
     </style>
+
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="{ 
+<body :class="{ 'light-mode': !darkMode }" x-data="{ 
     search: '', 
     statusFilter: 'all',
+    darkMode: true,
     isVisible(url, title, status, tech) {
         const matchesSearch = url.toLowerCase().includes(this.search.toLowerCase()) || 
                              title.toLowerCase().includes(this.search.toLowerCase()) ||
@@ -182,21 +215,24 @@
         return targets.some(t => this.isVisible(t.URL, t.Metadata.Title, t.Metadata.StatusCode, t.Metadata.Technology.join(' ')));
     }
 }">
+
     <header>
         <div class="header-top">
             <div>
-                <h1>NetVista <span style="color: #64748b; font-weight: 300;">Visual Recon</span></h1>
-                <p style="margin-top: 0.5rem; color: #94a3b8;">Interactive intelligence report for discovered network assets</p>
+                <h1>NetVista <span class="header-title-main">Visual Recon</span></h1>
+                <p class="header-subtitle">Interactive intelligence report for discovered network assets</p>
             </div>
-            <div style="text-align: right;">
-                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">{{len .Results}}</div>
-                <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em;">Total Hosts</div>
+            <div class="header-stats">
+                <button @click="darkMode = !darkMode" class="clear-btn" style="margin-bottom: 0.5rem;" x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'" aria-label="Toggle Dark/Light Mode"></button>
+                <div class="stats-count">{{len .Results}}</div>
+                <div class="stats-label">Total Hosts</div>
             </div>
         </div>
         
         <div class="controls">
-            <input type="text" x-model="search" placeholder="Search by URL, Title, or Technology..." class="search-input">
-            <select x-model="statusFilter" class="filter-select">
+            <input type="text" x-model="search" placeholder="Search by URL, Title, or Technology..." class="search-input" aria-label="Search">
+            <select x-model="statusFilter" class="filter-select" aria-label="Status Code Filter">
+
                 <option value="all">All Status Codes</option>
                 <option value="200">200 OK</option>
                 <option value="403">403 Forbidden</option>
@@ -221,11 +257,12 @@
                 </a>
                 <div class="card-content">
                     <div class="card-title">{{.URL}}</div>
-                    <div style="margin-bottom: 0.75rem;">
+                    <div class="status-badge-container">
                         <span class="badge {{if eq .Metadata.StatusCode 200}}badge-success{{else if ge .Metadata.StatusCode 400}}badge-danger{{else}}badge-warning{{end}}">
                             HTTP {{.Metadata.StatusCode}}
                         </span>
                     </div>
+
                     <div>
                         {{range .Metadata.Technology}}
                         <span class="tech-tag">{{.}}</span>
@@ -233,9 +270,10 @@
                     </div>
                     <div class="metadata">
                         <div class="metadata-item"><span class="metadata-label">Title:</span> <span>{{.Metadata.Title}}</span></div>
-                        {{if .PHash}}<div class="metadata-item"><span class="metadata-label">PHash:</span> <code style="font-size: 0.7rem; color: var(--accent);">{{.PHash}}</code></div>{{end}}
+                        {{if .PHash}}<div class="metadata-item"><span class="metadata-label">PHash:</span> <code class="phash-code">{{.PHash}}</code></div>{{end}}
                         <div class="metadata-item"><span class="metadata-label">Time:</span> <span>{{.Metadata.Timestamp.Format "2006-01-02 15:04:05"}}</span></div>
                     </div>
+
                 </div>
             </div>
             {{end}}
@@ -243,9 +281,10 @@
     </div>
     {{end}}
     
-    <div x-show="search !== '' || statusFilter !== 'all'" style="text-align: center; margin-top: 2rem; color: #64748b;" x-cloak>
-        Filtering results for "<span x-text="search" style="color: var(--accent);"></span>"
-        <button @click="search = ''; statusFilter = 'all';" style="margin-left: 1rem; color: var(--accent); background: none; border: 1px solid var(--accent); padding: 0.2rem 0.5rem; border-radius: 0.3rem; cursor: pointer;">Clear Filters</button>
+    <div x-show="search !== '' || statusFilter !== 'all'" class="footer-info" x-cloak>
+        Filtering results for "<span x-text="search" class="footer-highlight"></span>"
+        <button @click="search = ''; statusFilter = 'all';" class="clear-btn">Clear Filters</button>
     </div>
+
 </body>
 </html>

@@ -1,0 +1,48 @@
+fingerprints:
+  - name: "WordPress"
+    body: "/wp-content/"
+    title: "WordPress"
+  - name: "Joomla"
+    body: "/media/system/js/"
+    title: "Joomla"
+  - name: "Drupal"
+    header:
+      X-Generator: "Drupal"
+  - name: "React"
+    body: "node_modules"
+    title: "React App"
+  - name: "Vue.js"
+    body: "v-cloak"
+  - name: "Angular"
+    body: "ng-version"
+  - name: "Nginx"
+    header:
+      Server: "nginx"
+  - name: "Apache"
+    header:
+      Server: "Apache"
+  - name: "Cloudflare"
+    header:
+      Server: "cloudflare"
+  - name: "PHP"
+    header:
+      X-Powered-By: "PHP"
+  - name: "ASP.NET"
+    header:
+      X-Powered-By: "ASP.NET"
+  - name: "Express"
+    header:
+      X-Powered-By: "Express"
+  - name: "Next.js"
+    header:
+      X-Powered-By: "Next.js"
+
+takeovers:
+  - name: "GitHub Pages"
+    fingerprint: "There isn't a GitHub Pages site here"
+  - name: "AWS S3"
+    fingerprint: "NoSuchBucket"
+  - name: "Heroku"
+    fingerprint: "no such app"
+  - name: "Azure"
+    fingerprint: "404 Web Site not found"

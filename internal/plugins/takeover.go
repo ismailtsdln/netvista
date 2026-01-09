@@ -1,20 +1,19 @@
 package plugins
 
 import (
+	"strings"
+
 	"github.com/ismailtsdln/netvista/pkg/models"
+	"github.com/ismailtsdln/netvista/pkg/signatures"
 )
 
 type TakeoverPlugin struct {
-	Signatures map[string]string
+	signatures []signatures.TakeoverSig
 }
 
-func NewTakeoverPlugin() *TakeoverPlugin {
+func NewTakeoverPlugin(sigs []signatures.TakeoverSig) *TakeoverPlugin {
 	return &TakeoverPlugin{
-		Signatures: map[string]string{
-			"GitHub Pages": "There isn't a GitHub Pages site here",
-			"Heroku":       "herokucdn.com/error-pages/no-such-app.html",
-			"S3 Bucket":    "The specified bucket does not exist",
-		},
+		signatures: sigs,
 	}
 }
 
@@ -23,7 +22,10 @@ func (t *TakeoverPlugin) Name() string {
 }
 
 func (t *TakeoverPlugin) Execute(target *models.Target) error {
-	// This would ideally check the body, but for now we'll just check if it's already in metadata or placeholder
-	// In a real scenario, we'd pass the body to Execute or re-fetch (not ideal)
+	for _, sig := range t.signatures {
+		if strings.Contains(target.Metadata.Body, sig.Fingerprint) {
+			target.Metadata.Technology = append(target.Metadata.Technology, "Vulnerable: "+sig.Name)
+		}
+	}
 	return nil
 }

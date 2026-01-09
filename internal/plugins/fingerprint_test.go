@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"github.com/ismailtsdln/netvista/pkg/models"
+	"github.com/ismailtsdln/netvista/pkg/signatures"
 )
 
 func TestFingerprintPlugin(t *testing.T) {
-	plugin := NewFingerprintPlugin()
+	plugin := NewFingerprintPlugin([]signatures.FingerprintSig{
+		{Name: "WordPress", Title: "WordPress"},
+	})
 
 	target := &models.Target{
 		Metadata: models.ResponseMetadata{

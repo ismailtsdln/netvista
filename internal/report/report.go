@@ -3,9 +3,11 @@ package report
 import (
 	"encoding/json"
 	"html/template"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ismailtsdln/netvista/internal/screenshot"
 	"github.com/ismailtsdln/netvista/pkg/models"
@@ -17,6 +19,7 @@ type ReportData struct {
 }
 
 func GenerateHTML(results []models.Target, templatePath string, outputPath string) error {
+	start := time.Now()
 	// Simple clustering
 	grouped := make(map[string][]models.Target)
 	processed := make(map[string]bool)
@@ -41,12 +44,13 @@ func GenerateHTML(results []models.Target, templatePath string, outputPath strin
 			}
 
 			dist, err := screenshot.HammingDistance(r1.PHash, r2.PHash)
-			if err == nil && dist < 8 { // Threshold for similarity
+			if err == nil && dist < 12 { // Increased threshold slightly for better grouping
 				grouped[groupKey] = append(grouped[groupKey], r2)
 				processed[r2.URL] = true
 			}
 		}
 	}
+	slog.Info("Clustering complete", "duration", time.Since(start), "groups", len(grouped))
 
 	tmpl, err := template.New(filepath.Base(templatePath)).Funcs(template.FuncMap{
 		"sanitize": func(s string) string {

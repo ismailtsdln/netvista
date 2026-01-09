@@ -4,36 +4,16 @@ import (
 	"strings"
 
 	"github.com/ismailtsdln/netvista/pkg/models"
+	"github.com/ismailtsdln/netvista/pkg/signatures"
 )
 
-type signature struct {
-	name   string
-	header map[string]string
-	title  string
-	body   string
-}
-
 type FingerprintPlugin struct {
-	signatures []signature
+	signatures []signatures.FingerprintSig
 }
 
-func NewFingerprintPlugin() *FingerprintPlugin {
+func NewFingerprintPlugin(sigs []signatures.FingerprintSig) *FingerprintPlugin {
 	return &FingerprintPlugin{
-		signatures: []signature{
-			{name: "WordPress", body: "/wp-content/", title: "WordPress"},
-			{name: "Joomla", body: "/media/system/js/", title: "Joomla"},
-			{name: "Drupal", body: "Drupal", header: map[string]string{"X-Generator": "Drupal"}},
-			{name: "React", body: "node_modules", title: "React App"},
-			{name: "Vue.js", body: "v-cloak"},
-			{name: "Angular", body: "ng-version"},
-			{name: "Nginx", header: map[string]string{"Server": "nginx"}},
-			{name: "Apache", header: map[string]string{"Server": "Apache"}},
-			{name: "Cloudflare", header: map[string]string{"Server": "cloudflare"}},
-			{name: "PHP", header: map[string]string{"X-Powered-By": "PHP"}},
-			{name: "ASP.NET", header: map[string]string{"X-Powered-By": "ASP.NET"}},
-			{name: "Express", header: map[string]string{"X-Powered-By": "Express"}},
-			{name: "Next.js", header: map[string]string{"X-Powered-By": "Next.js"}},
-		},
+		signatures: sigs,
 	}
 }
 
@@ -44,7 +24,7 @@ func (f *FingerprintPlugin) Name() string {
 func (f *FingerprintPlugin) Execute(target *models.Target) error {
 	techs := make(map[string]bool)
 
-	// Existing logic for generic headers
+	// Generic headers
 	if server := target.Metadata.Headers["Server"]; server != "" {
 		techs[server] = true
 	}
@@ -56,8 +36,8 @@ func (f *FingerprintPlugin) Execute(target *models.Target) error {
 		matched := false
 
 		// Check headers
-		if sig.header != nil {
-			for k, v := range sig.header {
+		if sig.Header != nil {
+			for k, v := range sig.Header {
 				if val, ok := target.Metadata.Headers[k]; ok && strings.Contains(strings.ToLower(val), strings.ToLower(v)) {
 					matched = true
 					break
@@ -66,15 +46,12 @@ func (f *FingerprintPlugin) Execute(target *models.Target) error {
 		}
 
 		// Check title
-		if !matched && sig.title != "" && strings.Contains(strings.ToLower(target.Metadata.Title), strings.ToLower(sig.title)) {
+		if !matched && sig.Title != "" && strings.Contains(strings.ToLower(target.Metadata.Title), strings.ToLower(sig.Title)) {
 			matched = true
 		}
 
-		// Check body (not currently stored in target, but let's assume we might want to store a snippet or hash)
-		// For now we'll skip body matching until we store it, or we rely on headers/title
-
 		if matched {
-			techs[sig.name] = true
+			techs[sig.Name] = true
 		}
 	}
 

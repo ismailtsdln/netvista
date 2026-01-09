@@ -3,6 +3,7 @@ package prober
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -76,13 +77,18 @@ func (p *Prober) probeURL(ctx context.Context, targetURL string) (*models.Target
 	}
 	defer resp.Body.Close()
 
+	// Limit body read to 1MB
+	const maxBodySize = 1 * 1024 * 1024 // 1MB
+	limitedReader := io.LimitReader(resp.Body, maxBodySize)
+	bodyBytes, err := io.ReadAll(limitedReader)
+	if err != nil {
+		// Log error but continue, as we might still have headers/status
+		fmt.Printf("Error reading response body for %s: %v\n", targetURL, err)
+	}
+	body := string(bodyBytes)
+
 	// Simple title extraction
 	titleRegex := regexp.MustCompile("(?i)<title>(.*?)</title>")
-
-	// Read a bit of body for title
-	bodyBytes := make([]byte, 4096)
-	n, _ := resp.Body.Read(bodyBytes)
-	body := string(bodyBytes[:n])
 
 	title := "No Title"
 	matches := titleRegex.FindStringSubmatch(body)
@@ -91,11 +97,10 @@ func (p *Prober) probeURL(ctx context.Context, targetURL string) (*models.Target
 	}
 
 	metadata := models.ResponseMetadata{
-		Title:         title,
-		StatusCode:    resp.StatusCode,
-		ContentLength: resp.ContentLength,
-		Headers:       make(map[string]string),
-		Timestamp:     time.Now(),
+		Title:      title,
+		StatusCode: resp.StatusCode,
+		Headers:    make(map[string]string),
+		Body:       body,
 	}
 
 	for k, v := range resp.Header {
