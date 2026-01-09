@@ -53,7 +53,8 @@ func main() {
 		fmt.Println("\n  # Parsing Nmap XML input")
 		fmt.Println("  ./netvista scan --nmap network.xml -o nmap_report")
 		fmt.Println("\n  # Scan via Proxy and auto-open report")
-		fmt.Println("  echo \"target.local\" | ./netvista scan -proxy \"http://127.0.0.1:8080\" -open\n")
+		fmt.Println("  # Scan via Proxy and auto-open report")
+		fmt.Println("  echo \"target.local\" | ./netvista scan -proxy \"http://127.0.0.1:8080\" -open")
 	}
 
 	confPath := scanCmd.String("config", "netvista.yaml", "Path to config file")
@@ -65,9 +66,6 @@ func main() {
 	proxy := scanCmd.String("proxy", "", "Proxy URL (e.g., http://127.0.0.1:8080)")
 	headers := scanCmd.String("H", "", "Custom headers (e.g., \"User-Agent: NetVista, X-Scan: 1\")")
 	redirects := scanCmd.Int("max-redirects", 10, "Max redirects to follow")
-	exportCSV := scanCmd.Bool("csv", true, "Export to CSV")
-	exportMD := scanCmd.Bool("md", true, "Export to Markdown")
-	exportTXT := scanCmd.Bool("txt", true, "Export to Text (alive URLs)")
 	autoOpen := scanCmd.Bool("open", false, "Automatically open the HTML report")
 
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
@@ -80,16 +78,17 @@ func main() {
 		fmt.Println("  # Serve current reports directory on default port")
 		fmt.Println("  ./netvista serve -d reports")
 		fmt.Println("\n  # Serve custom directory on port 9090")
-		fmt.Println("  ./netvista serve -d my_scan -p 9090\n")
+		fmt.Println("  # Serve custom directory on port 9090")
+		fmt.Println("  ./netvista serve -d my_scan -p 9090")
 	}
 	serveDir := serveCmd.String("d", "reports", "Directory to serve")
 	servePort := serveCmd.String("p", "8080", "Port to serve on")
 
 	flag.Usage = func() {
 		color.Cyan(utils.GetBanner(version))
-		fmt.Println(" Advanced Visual Reconnaissance Tool for Professionals\n")
+		fmt.Println(" Advanced Visual Reconnaissance Tool for Professionals")
 		color.Yellow(" Usage:")
-		fmt.Println("  netvista <command> [options]\n")
+		fmt.Println("  netvista <command> [options]")
 		color.Yellow(" Commands:")
 		fmt.Println("  scan    Perform network discovery and visual capture")
 		fmt.Println("  serve   Launch interactive dashboard from report directory")
@@ -251,12 +250,6 @@ func main() {
 			htmlPath := filepath.Join(*output, "report.html")
 			utils.OpenBrowser(htmlPath)
 		}
-
-		// Keep variables used to avoid compiler errors during development if needed
-		_ = exportCSV
-		_ = exportMD
-		_ = exportTXT
-
 		color.Green("\n [✓] Scan complete! Results saved to: %s", *output)
 		color.Yellow(" [i] Run 'netvista serve -d %s' to view interactive dashboard.\n", *output)
 
