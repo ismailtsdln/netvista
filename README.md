@@ -1,10 +1,10 @@
-# 👁️ NetVista v2.0-adv
+# 👁️ NetVista v2.1.0-pro
 
 <p align="center">
   <img src="web/assets/logo.png" alt="NetVista Logo" width="200">
 </p>
 
-**NetVista v2.0-adv** is a professional-grade Visual Reconnaissance tool refactored with **Hexagonal Architecture (Ports & Adapters)** for enterprise-scale reliability. It provides deep visibility into your target's attack surface through smart rendering, technology fingerprinting, and visual intelligence.
+**NetVista v2.1.0-pro** is a professional-grade Visual Reconnaissance tool refactored with **Hexagonal Architecture (Ports & Adapters)** for enterprise-scale reliability. It provides deep visibility into your target's attack surface through smart rendering, technology fingerprinting, and visual intelligence.
 
 ## ✨ Advanced Features (v2.0)
 
