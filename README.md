@@ -23,31 +23,33 @@
 ### Installation
 
 #### Install via Go (Recommended)
+
 ```bash
 go install github.com/ismailtsdln/netvista/cmd/netvista@latest
 ```
 
 #### From Source
+
 ```bash
 git clone https://github.com/ismailtsdln/netvista
 cd netvista
 go build -o netvista cmd/netvista/main.go
 ```
 
-
-### Usage
-
 #### Basic Scan
+
 ```bash
 echo "example.com" | ./netvista scan
 ```
 
 #### Nmap Integration
+
 ```bash
 ./netvista scan --nmap targets.xml -o my_report
 ```
 
 #### Serve Dashboard
+
 ```bash
 ./netvista serve -d my_report
 ```
@@ -66,6 +68,7 @@ headers: "User-Agent: NetVista-Scanner"
 ## 🏗️ Architecture
 
 NetVista is built with modularity in mind:
+
 - **Engine**: Handles the worker pool and target distribution.
 - **Prober**: Performs HTTP/S probing and metadata extraction.
 - **Capturer**: Manages a headless browser pool for high-fidelity screenshots.

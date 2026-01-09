@@ -175,6 +175,10 @@
         .footer-highlight { color: var(--accent); }
         .clear-btn { margin-left: 1rem; color: var(--accent); background: none; border: 1px solid var(--accent); padding: 0.2rem 0.5rem; border-radius: 0.3rem; cursor: pointer; }
         
+        /* New utility classes to replace inline styles */
+        .header-logo-img { height: 50px; margin-bottom: 1rem; }
+        .theme-toggle-btn { margin-bottom: 0.5rem; }
+        
         /* Dark/Light mode support */
         .light-mode {
             --bg: #f8fafc;
@@ -219,11 +223,11 @@
     <header>
         <div class="header-top">
                 <div class="header-logo">
-                    <img src="assets/logo.png" alt="NetVista Logo" style="height: 50px; margin-bottom: 1rem;">
+                    <img src="assets/logo.png" alt="NetVista Logo" class="header-logo-img">
                     <h1 class="header-title">NetVista Intelligence Report</h1>
                 </div>
             <div class="header-stats">
-                <button @click="darkMode = !darkMode" class="clear-btn" style="margin-bottom: 0.5rem;" x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'" aria-label="Toggle Dark/Light Mode"></button>
+                <button @click="darkMode = !darkMode" class="clear-btn theme-toggle-btn" x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'" aria-label="Toggle Dark/Light Mode"></button>
                 <div class="stats-count">{{len .Results}}</div>
                 <div class="stats-label">Total Hosts</div>
             </div>
@@ -252,7 +256,7 @@
         <div class="grid">
             {{range $targets}}
             <div class="card" x-show="isVisible('{{.URL}}', '{{.Metadata.Title}}', {{.Metadata.StatusCode}}, '{{range .Metadata.Technology}}{{.}} {{end}}')" x-transition>
-                <a href="{{.URL}}" target="_blank">
+                <a href="{{.URL}}" target="_blank" rel="noopener">
                     <img src="./{{.URL | sanitize}}.png" alt="Screenshot of {{.URL}}" onerror="this.src='https://placehold.co/600x400/1e293b/f1f5f9?text=No+Screenshot'">
                 </a>
                 <div class="card-content">
