@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/corona10/goimagehash"
 	"github.com/playwright-community/playwright-go"
@@ -22,10 +24,13 @@ type CaptureResult struct {
 }
 
 type Capturer struct {
-	PW        *playwright.Playwright
-	Browser   playwright.Browser
-	OutputDir string
-	ProxyURL  string
+	PW             *playwright.Playwright
+	Browser        playwright.Browser
+	OutputDir      string
+	ProxyURL       string
+	activeContexts int
+	maxContexts    int
+	mu             sync.Mutex
 }
 
 func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
@@ -51,14 +56,31 @@ func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
 	}
 
 	return &Capturer{
-		PW:        pw,
-		Browser:   browser,
-		OutputDir: outputDir,
-		ProxyURL:  proxyURL,
+		PW:             pw,
+		Browser:        browser,
+		OutputDir:      outputDir,
+		ProxyURL:       proxyURL,
+		maxContexts:    10,
+		activeContexts: 0,
 	}, nil
 }
 
 func (c *Capturer) Capture(ctx context.Context, url string, filename string) (*CaptureResult, error) {
+	c.mu.Lock()
+	for c.activeContexts >= c.maxContexts {
+		c.mu.Unlock()
+		time.Sleep(100 * time.Millisecond)
+		c.mu.Lock()
+	}
+	c.activeContexts++
+	c.mu.Unlock()
+
+	defer func() {
+		c.mu.Lock()
+		c.activeContexts--
+		c.mu.Unlock()
+	}()
+
 	opts := playwright.BrowserNewContextOptions{}
 	if c.ProxyURL != "" {
 		opts.Proxy = &playwright.Proxy{
@@ -85,7 +107,7 @@ func (c *Capturer) Capture(ctx context.Context, url string, filename string) (*C
 	}
 
 	// SPA Detection & Cookie Consent Bypass
-	c.handleSmartInteractions(page)
+	framework := c.handleSmartInteractions(page)
 
 	path := filepath.Join(c.OutputDir, filename)
 	screenshotBytes, err := page.Screenshot(playwright.PageScreenshotOptions{
@@ -147,6 +169,8 @@ func (c *Capturer) handleSmartInteractions(page playwright.Page) string {
 			}
 		}
 	}
+
+	return framework
 }
 
 func (c *Capturer) Close() error {

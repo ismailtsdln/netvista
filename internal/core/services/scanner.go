@@ -11,7 +11,7 @@ import (
 	"github.com/ismailtsdln/netvista/internal/core/ports"
 )
 
-// ScannerService coordinates the scanning process.
+// ScannerService implements the core scanning logic.
 type ScannerService struct {
 	prober    ports.Prober
 	renderer  ports.Renderer
@@ -21,79 +21,80 @@ type ScannerService struct {
 	logger    *slog.Logger
 }
 
-// NewScannerService creates a new instance of the scanner service.
+// NewScannerService creates a new ScannerService.
 func NewScannerService(
-	p ports.Prober,
-	r ports.Renderer,
-	a []ports.Analyzer,
-	rep ports.Reporter,
-	cfg domain.Config,
+	prober ports.Prober,
+	renderer ports.Renderer,
+	analyzers []ports.Analyzer,
+	reporter ports.Reporter,
+	config domain.Config,
 	logger *slog.Logger,
 ) *ScannerService {
 	return &ScannerService{
-		prober:    p,
-		renderer:  r,
-		analyzers: a,
-		reporter:  rep,
-		config:    cfg,
+		prober:    prober,
+		renderer:  renderer,
+		analyzers: analyzers,
+		reporter:  reporter,
+		config:    config,
 		logger:    logger,
 	}
 }
 
-// Scan targets and generate a report.
+// Scan performs a scan on a list of targets.
 func (s *ScannerService) Scan(ctx context.Context, targets []domain.Target) error {
+	// Deduplicate targets by URL
+	uniqueTargets := make(map[string]domain.Target)
+	for _, t := range targets {
+		uniqueTargets[t.URL] = t
+	}
+
+	targets = []domain.Target{}
+	for _, t := range uniqueTargets {
+		targets = append(targets, t)
+	}
+
 	s.logger.Info("Starting advanced scan", "targets", len(targets), "concurrency", s.config.Concurrency)
 
-	resultsChan := make(chan domain.ScanResult, len(targets))
-	targetsChan := make(chan domain.Target, len(targets))
-
 	var wg sync.WaitGroup
+	results := make(chan domain.ScanResult, len(targets))
+	workers := make(chan struct{}, s.config.Concurrency)
 
-	// Start workers
-	for i := 0; i < s.config.Concurrency; i++ {
-		wg.Add(1)
-		go s.worker(ctx, &wg, targetsChan, resultsChan)
-	}
-
-	// Supply targets
 	for _, t := range targets {
-		targetsChan <- t
-	}
-	close(targetsChan)
+		wg.Add(1)
+		go func(target domain.Target) {
+			defer wg.Done()
+			workers <- struct{}{}
+			defer func() { <-workers }()
 
-	// Collect results
+			results <- s.processTarget(ctx, target)
+		}(t)
+	}
+
+	// Wait for all workers to finish
 	go func() {
 		wg.Wait()
-		close(resultsChan)
+		close(results)
 	}()
 
-	var allResults []domain.ScanResult
-	for res := range resultsChan {
-		allResults = append(allResults, res)
+	var scanResults []domain.ScanResult
+	for res := range results {
+		scanResults = append(scanResults, res)
+		if res.Error != "" {
+			s.logger.Warn("Scan result with error", "url", res.Target.URL, "error", res.Error)
+		}
 	}
 
-	// Generate final report
+	// Cluster results for reporting (simple grouping by domain or visual similarity)
+	// This is now handled in the reporter adapter for v1 compatibility
+
+	s.logger.Info("Scan completed, generating reports...")
 	if s.reporter != nil {
-		if err := s.reporter.Write(allResults); err != nil {
+		if err := s.reporter.Report(ctx, scanResults); err != nil {
 			return fmt.Errorf("reporting failed: %w", err)
 		}
 	}
 
 	return nil
-}
-
-func (s *ScannerService) worker(ctx context.Context, wg *sync.WaitGroup, targets <-chan domain.Target, results chan<- domain.ScanResult) {
-	defer wg.Done()
-
-	for t := range targets {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			res := s.processTarget(ctx, t)
-			results <- res
-		}
-	}
 }
 
 func (s *ScannerService) processTarget(ctx context.Context, t domain.Target) domain.ScanResult {
@@ -142,7 +143,7 @@ func (s *ScannerService) processTarget(ctx context.Context, t domain.Target) dom
 		if err == nil {
 			result.Screenshot = path
 			result.PHash = phash
-			if framework != "Static" {
+			if framework != "Static" && framework != "" {
 				result.Metadata.Technology = append(result.Metadata.Technology, framework)
 			}
 		} else {
@@ -150,10 +151,10 @@ func (s *ScannerService) processTarget(ctx context.Context, t domain.Target) dom
 		}
 	}
 
-	// 3. Analyze (Plugins)
+	// 3. Analyze
 	for _, analyzer := range s.analyzers {
 		if err := analyzer.Analyze(ctx, &result); err != nil {
-			s.logger.Warn("Analysis failed", "url", t.URL, "analyzer", analyzer.Name(), "error", err)
+			s.logger.Warn("Analysis failed", "analyzer", analyzer.Name(), "url", t.URL, "error", err)
 		}
 	}
 

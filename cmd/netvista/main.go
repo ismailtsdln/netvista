@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,6 +20,7 @@ import (
 	"github.com/ismailtsdln/netvista/internal/infra/adapters"
 	"github.com/ismailtsdln/netvista/internal/plugins"
 	"github.com/ismailtsdln/netvista/pkg/config"
+	"github.com/ismailtsdln/netvista/pkg/models"
 	"github.com/ismailtsdln/netvista/pkg/signatures"
 	"github.com/ismailtsdln/netvista/pkg/utils"
 )
@@ -35,25 +38,67 @@ func main() {
 	color.Cyan(banner)
 
 	scanCmd := flag.NewFlagSet("scan", flag.ExitOnError)
+	scanCmd.Usage = func() {
+		color.Cyan("\n [▶] NetVista Scan Engine - Usage")
+		fmt.Fprintf(os.Stderr, " Usage: netvista scan [options] < targets.txt\n\n")
+		color.Yellow(" Options:")
+		scanCmd.PrintDefaults()
+		color.Yellow("\n Examples:")
+		fmt.Println("  # Basic scanning from stdin")
+		fmt.Println("  echo \"example.com\" | ./netvista scan -o reports")
+		fmt.Println("\n  # Comprehensive scan with custom ports and concurrency")
+		fmt.Println("  cat targets.txt | ./netvista scan -p 80,443,8080 -c 10 -o results")
+		fmt.Println("\n  # Resuming a scan (Incremental mode)")
+		fmt.Println("  echo \"example.com\" | ./netvista scan -o previous_results")
+		fmt.Println("\n  # Parsing Nmap XML input")
+		fmt.Println("  ./netvista scan --nmap network.xml -o nmap_report")
+		fmt.Println("\n  # Scan via Proxy and auto-open report")
+		fmt.Println("  echo \"target.local\" | ./netvista scan -proxy \"http://127.0.0.1:8080\" -open\n")
+	}
+
 	confPath := scanCmd.String("config", "netvista.yaml", "Path to config file")
-	portsFlag := scanCmd.String("p", "", "Ports to scan (e.g., 80,443,8000-9000)")
+	portsFlag := scanCmd.String("p", "", "Ports to scan (preset: top-100, top-1000, full or e.g., 80,443)")
 	concurrency := scanCmd.Int("c", 0, "Number of concurrent workers")
-	output := scanCmd.String("o", "", "Output directory for reports")
-	timeout := scanCmd.String("t", "", "Timeout per host")
+	output := scanCmd.String("o", "reports", "Output directory for reports")
+	timeout := scanCmd.String("t", "10s", "Timeout per host")
 	nmapFile := scanCmd.String("nmap", "", "Nmap XML file to parse")
-	proxy := scanCmd.String("proxy", "", "Proxy URL")
-	headers := scanCmd.String("H", "", "Custom headers")
-	redirects := scanCmd.Int("max-redirects", 0, "Max redirects to follow")
-	exportCSV := scanCmd.Bool("csv", false, "Export to CSV")
-	exportMD := scanCmd.Bool("md", false, "Export to Markdown")
-	exportTXT := scanCmd.Bool("txt", false, "Export to Text (alive URLs)")
+	proxy := scanCmd.String("proxy", "", "Proxy URL (e.g., http://127.0.0.1:8080)")
+	headers := scanCmd.String("H", "", "Custom headers (e.g., \"User-Agent: NetVista, X-Scan: 1\")")
+	redirects := scanCmd.Int("max-redirects", 10, "Max redirects to follow")
+	exportCSV := scanCmd.Bool("csv", true, "Export to CSV")
+	exportMD := scanCmd.Bool("md", true, "Export to Markdown")
+	exportTXT := scanCmd.Bool("txt", true, "Export to Text (alive URLs)")
+	autoOpen := scanCmd.Bool("open", false, "Automatically open the HTML report")
 
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
+	serveCmd.Usage = func() {
+		color.Cyan("\n [▶] NetVista Serve Engine - Usage")
+		fmt.Fprintf(os.Stderr, " Usage: netvista serve -d <report_dir> -p <port>\n\n")
+		color.Yellow(" Options:")
+		serveCmd.PrintDefaults()
+		color.Yellow("\n Examples:")
+		fmt.Println("  # Serve current reports directory on default port")
+		fmt.Println("  ./netvista serve -d reports")
+		fmt.Println("\n  # Serve custom directory on port 9090")
+		fmt.Println("  ./netvista serve -d my_scan -p 9090\n")
+	}
 	serveDir := serveCmd.String("d", "reports", "Directory to serve")
 	servePort := serveCmd.String("p", "8080", "Port to serve on")
 
+	flag.Usage = func() {
+		color.Cyan(utils.GetBanner(version))
+		fmt.Println(" Advanced Visual Reconnaissance Tool for Professionals\n")
+		color.Yellow(" Usage:")
+		fmt.Println("  netvista <command> [options]\n")
+		color.Yellow(" Commands:")
+		fmt.Println("  scan    Perform network discovery and visual capture")
+		fmt.Println("  serve   Launch interactive dashboard from report directory")
+		fmt.Println("  version Show application version info")
+		color.Yellow("\n Use 'netvista <command> --help' for more information on a command.\n")
+	}
+
 	if len(os.Args) < 2 {
-		color.Red("Expected 'scan', 'serve' or 'version' subcommands")
+		flag.Usage()
 		os.Exit(1)
 	}
 
@@ -99,10 +144,9 @@ func main() {
 		}
 
 		customHeaders := make(map[string]string)
-		var customHeadersList []string
 		if *headers != "" {
-			customHeadersList = strings.Split(*headers, ",")
-			for _, part := range customHeadersList {
+			parts := strings.Split(*headers, ",")
+			for _, part := range parts {
 				kv := strings.SplitN(part, ":", 2)
 				if len(kv) == 2 {
 					customHeaders[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
@@ -169,20 +213,46 @@ func main() {
 			os.Exit(0)
 		}
 
-		rawTargets = utils.ResolveTargets(rawTargets)
-		var targets []domain.Target
-		for _, rt := range rawTargets {
-			targets = append(targets, domain.Target{URL: rt})
+		// Load existing results for incremental scanning
+		seenURLs := make(map[string]bool)
+		resultsPath := filepath.Join(*output, "results.json")
+		if data, terr := os.ReadFile(resultsPath); terr == nil {
+			var existing []models.Target
+			if err := json.Unmarshal(data, &existing); err == nil {
+				for _, r := range existing {
+					seenURLs[r.URL] = true
+				}
+				slog.Info("Loaded existing results for incremental scan", "count", len(existing))
+			}
+		}
+
+		resolvedTargets := utils.ResolveTargets(rawTargets)
+		var finalTargets []domain.Target
+		for _, rt := range resolvedTargets {
+			if seenURLs[rt] {
+				continue
+			}
+			finalTargets = append(finalTargets, domain.Target{URL: rt})
+		}
+
+		if len(finalTargets) == 0 {
+			slog.Info("All targets already processed.")
+			os.Exit(0)
 		}
 
 		ctx := context.Background()
-		if err := scannerService.Scan(ctx, targets); err != nil {
+		if err := scannerService.Scan(ctx, finalTargets); err != nil {
 			slog.Error("Scan failed", "error", err)
 			os.Exit(1)
 		}
 
-		// Handle conditional exports if needed (already handled by reporter adapter for basic HTML)
-		// For MD/CSV/TXT we can add more logic to reporter or just leave as is since adapter handles it
+		if *autoOpen {
+			slog.Info("Opening report...")
+			htmlPath := filepath.Join(*output, "report.html")
+			utils.OpenBrowser(htmlPath)
+		}
+
+		// Keep variables used to avoid compiler errors during development if needed
 		_ = exportCSV
 		_ = exportMD
 		_ = exportTXT
@@ -208,8 +278,11 @@ func main() {
 
 	case "version":
 		color.Blue("NetVista v%s\n", version)
+	case "-h", "--help":
+		flag.Usage()
 	default:
-		color.Red("Unknown subcommand: %s\n", os.Args[1])
+		color.Red("Unknown subcommand: %s", os.Args[1])
+		fmt.Println("\nRun 'netvista --help' for usage info.")
 		os.Exit(1)
 	}
 }

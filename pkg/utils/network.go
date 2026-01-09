@@ -3,8 +3,29 @@ package utils
 import (
 	"fmt"
 	"net"
+	"os/exec"
+	"runtime"
 	"strings"
 )
+
+// OpenBrowser opens the specified URL/path in the default browser.
+func OpenBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "rundll32"
+		args = []string{"url.dll,FileProtocolHandler", url}
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+		args = []string{url}
+	}
+	return exec.Command(cmd, args...).Start()
+}
 
 // ParseCIDR expands a CIDR notation into a slice of IP strings.
 func ParseCIDR(cidr string) ([]string, error) {

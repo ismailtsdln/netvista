@@ -1,34 +1,27 @@
-# 👁️ NetVista
+# 👁️ NetVista v2.0-adv
 
 <p align="center">
   <img src="web/assets/logo.png" alt="NetVista Logo" width="200">
 </p>
 
-**NetVista** is a modern, high-performance Visual Reconnaissance tool designed for security researchers and bug bounty hunters. It combines network probing, technology fingerprinting, and visual intelligence to provide a comprehensive view of your target's attack surface.
+**NetVista v2.0-adv** is a professional-grade Visual Reconnaissance tool refactored with **Hexagonal Architecture (Ports & Adapters)** for enterprise-scale reliability. It provides deep visibility into your target's attack surface through smart rendering, technology fingerprinting, and visual intelligence.
 
-## ✨ Features
+## ✨ Advanced Features (v2.0)
 
-- 🚀 **Asynchronous Discovery**: Ultra-fast HTTP probing and port scanning.
-- 📸 **Visual Intelligence**: Automated screenshot capturing using Playwright.
-- 🧠 **Perceptual Hashing (pHash)**: Automatically groups visually similar hosts to minimize redundancy.
-- 🛡️ **Subdomain Takeover Detection**: Built-in signature-based detection for vulnerable cloud services.
-- 🔍 **Advanced Fingerprinting**: Identifies technologies via headers, titles, and body patterns.
-- 📊 **Interactive Dashboard**: Modern, searchable, and filterable HTML report with Dark/Light mode support.
-- 🗜️ **Report Distribution**: Automatic ZIP export for easy report sharing.
-- 🌐 **Proxy & Header Support**: HTTP/SOCKS5 proxy support and custom header injection.
-- ⚙️ **YAML Configuration**: Persistent settings via `netvista.yaml`.
+- 🏗️ **Hexagonal Architecture**: Decoupled core logic from infrastructure for extreme modularity and testability.
+- 📸 **Smart Rendering**: Adaptive waiting (NetworkIdle) and automatic detection/bypass of cookie consent overlays.
+- 🧠 **Framework Intelligence**: Automatic detection of modern SPA frameworks (React, Vue, etc.).
+- 🔄 **Incremental Scanning**: Intelligently skips previously processed targets to save time and resources.
+- ⚡ **Resource-Aware Scaling**: Thread-safe browser context pooling and responsive concurrency management.
+- 🔍 **Visual Deduplication**: Uses pHash to group visually identical hosts, reducing report noise.
+- 🛡️ **Advanced Resilience**: Exponential backoff and automated retries for transient network failures.
+- 📊 **Enterprise Reporting**: Multi-format exports (JSON, CSV, Markdown, Text, ZIP) and Interactive Dashboard 2.0.
 
 ## 🚀 Quick Start
 
 ### Installation
 
-#### Install via Go (Recommended)
-
-```bash
-go install github.com/ismailtsdln/netvista/cmd/netvista@latest
-```
-
-#### From Source
+### From Source
 
 ```bash
 git clone https://github.com/ismailtsdln/netvista
@@ -36,52 +29,32 @@ cd netvista
 go build -o netvista cmd/netvista/main.go
 ```
 
-#### Basic Scan
+### Basic Scan
 
 ```bash
-echo "example.com" | ./netvista scan
+echo "example.com" | ./netvista scan -o my_recon
 ```
 
-#### Nmap Integration
+### Incremental Scan (Resuming)
 
 ```bash
-./netvista scan --nmap targets.xml -o my_report
+echo "example.com" | ./netvista scan -o my_recon  # Skips if already in results.json
 ```
 
-#### Serve Dashboard
+## 🏗️ Architecture (Hexagonal)
 
+NetVista v2.0 follows the Clean Architecture / Ports & Adapters pattern:
+
+- **Core/Domain**: Pure business logic and models.
+- **Core/Ports**: Interface definitions for infra dependencies (Prober, Renderer, Reporter).
+- **Core/Services**: Orchestration layer (The `ScannerService`).
+- **Infra/Adapters**: Implementations using external tools (Playwright, Net/HTTP, Go-Report).
+
+## 📊 Interaction Dashboard
+Launch the dashboard to explore your scan results visually:
 ```bash
-./netvista serve -d my_report
+./netvista serve -d my_recon
 ```
-
-## 🛠️ Configuration (`netvista.yaml`)
-
-```yaml
-ports: "80,443,8000,8080,8443"
-concurrency: 20
-output: "reports"
-timeout: "10s"
-proxy: ""
-headers: "User-Agent: NetVista-Scanner"
-```
-
-## 🏗️ Architecture
-
-NetVista is built with modularity in mind:
-
-- **Engine**: Handles the worker pool and target distribution.
-- **Prober**: Performs HTTP/S probing and metadata extraction.
-- **Capturer**: Manages a headless browser pool for high-fidelity screenshots.
-- **Plugins**: Extensible system for fingerprinting and vulnerability detection.
-- **Reporting**: Generates static JSON results and dynamic HTML dashboards.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 Created with ❤️ by **İsmail Taşdelen**
