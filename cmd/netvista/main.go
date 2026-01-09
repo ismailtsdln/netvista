@@ -9,6 +9,7 @@ import (
 
 	"github.com/ismailtsdln/netvista/internal/engine"
 	"github.com/ismailtsdln/netvista/internal/prober"
+	"github.com/ismailtsdln/netvista/internal/screenshot"
 	"github.com/ismailtsdln/netvista/pkg/utils"
 )
 
@@ -64,13 +65,36 @@ func main() {
 			}
 		}
 
-		fmt.Printf("Starting scan on %d targets with concurrency: %d\n", len(targets), *concurrency)
+		if len(targets) == 0 {
+			fmt.Println("No targets found.")
+			os.Exit(0)
+		}
+
+		// If ports are specified and it's not from nmap, we might want to expand targets
+		// For now, we'll just log that we're using the specified ports if applicable
+		fmt.Printf("Starting scan on %d targets with ports [%s], concurrency: %d, output: %s\n", len(targets), *ports, *concurrency, *output)
+
+		cap, err := screenshot.NewCapturer(*output)
+		if err != nil {
+			fmt.Printf("Error initializing screenshot engine: %v\n", err)
+			os.Exit(1)
+		}
+		defer cap.Close()
 
 		ctx := context.Background()
 		results := e.Run(ctx, targets)
 
 		for res := range results {
 			fmt.Printf("[+] Found: %s (%d)\n", res.URL, res.Metadata.StatusCode)
+
+			// Hostname for filename
+			filename := fmt.Sprintf("%s.png", utils.SanitizeFilename(res.URL))
+			err := cap.Capture(res.URL, filename)
+			if err != nil {
+				fmt.Printf(" [!] Error capturing %s: %v\n", res.URL, err)
+			} else {
+				fmt.Printf(" [✓] Screenshot saved: %s\n", filename)
+			}
 		}
 
 	case "version":

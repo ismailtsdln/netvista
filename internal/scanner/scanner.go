@@ -34,7 +34,7 @@ func (ps *PortScanner) Scan(ctx context.Context, host string, ports []int) []int
 				semaphore <- struct{}{}
 				defer func() { <-semaphore }()
 
-				address := fmt.Sprintf("%s:%d", host, p)
+				address := net.JoinHostPort(host, fmt.Sprintf("%d", p))
 				conn, err := net.DialTimeout("tcp", address, ps.Timeout)
 				if err == nil {
 					conn.Close()
