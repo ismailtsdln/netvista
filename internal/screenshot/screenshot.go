@@ -12,9 +12,11 @@ type Capturer struct {
 	PW        *playwright.Playwright
 	Browser   playwright.Browser
 	OutputDir string
+	ProxyURL  string
 }
 
-func NewCapturer(outputDir string) (*Capturer, error) {
+func NewCapturer(outputDir string, proxyURL string) (*Capturer, error) {
+
 	err := playwright.Install()
 	if err != nil {
 		return nil, fmt.Errorf("could not install playwright: %v", err)
@@ -40,11 +42,19 @@ func NewCapturer(outputDir string) (*Capturer, error) {
 		PW:        pw,
 		Browser:   browser,
 		OutputDir: outputDir,
+		ProxyURL:  proxyURL,
 	}, nil
 }
 
 func (c *Capturer) Capture(url string, filename string) ([]byte, error) {
-	context, err := c.Browser.NewContext()
+	opts := playwright.BrowserNewContextOptions{}
+	if c.ProxyURL != "" {
+		opts.Proxy = &playwright.Proxy{
+			Server: playwright.String(c.ProxyURL),
+		}
+	}
+
+	context, err := c.Browser.NewContext(opts)
 	if err != nil {
 		return nil, err
 	}

@@ -5,127 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NetVista Dashboard</title>
     <style>
-      :root {
-        --bg: #0f172a;
-        --card-bg: #1e293b;
-        --text: #f1f5f9;
-        --accent: #38bdf8;
-        --success: #22c55e;
-        --warning: #f59e0b;
-      }
-      body {
-        font-family:
-          "Inter",
-          system-ui,
-          -apple-system,
-          sans-serif;
-        background-color: var(--bg);
-        color: var(--text);
-        margin: 0;
-        padding: 2rem;
-      }
-      header {
-        margin-bottom: 2rem;
-        border-bottom: 1px solid #334155;
-        padding-bottom: 1rem;
-      }
-      h1 {
-        color: var(--accent);
-        margin: 0;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 1.5rem;
-      }
-      .card {
-        background: var(--card-bg);
-        border-radius: 0.75rem;
-        overflow: hidden;
-        border: 1px solid #334155;
-        transition: transform 0.2s;
-      }
-      .card:hover {
-        transform: translateY(-4px);
-        border-color: var(--accent);
-      }
-      .card img {
-        width: 100%;
-        height: 200px;
-        object-fit: cover;
-        border-bottom: 1px solid #334155;
-        background: #000;
-      }
-      .card-content {
-        padding: 1rem;
-      }
-      .card-title {
-        font-weight: 600;
-        color: var(--accent);
-        margin-bottom: 0.5rem;
-        word-break: break-all;
-      }
-      .badge {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        margin-right: 0.5rem;
-      }
-      .badge-success {
-        background: var(--success);
-        color: white;
-      }
-      .badge-warning {
-        background: var(--warning);
-        color: white;
-      }
-
-      .metadata {
-        font-size: 0.875rem;
-        color: #94a3b8;
-        margin-top: 0.5rem;
-      }
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --accent: #38bdf8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+        }
+        header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            color: var(--accent);
+            margin: 0;
+        }
+        .cluster {
+            margin-bottom: 3rem;
+        }
+        .cluster-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            padding-left: 1rem;
+            border-left: 4px solid var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cluster-count {
+            background: #334155;
+            padding: 0.1rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid #334155;
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+        }
+        .card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid #334155;
+            background: #000;
+        }
+        .card-content {
+            padding: 1rem;
+        }
+        .card-title {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            word-break: break-all;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+        .badge-success { background: var(--success); color: white; }
+        .badge-warning { background: var(--warning); color: white; }
+        
+        .metadata {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+        .tech-tag {
+            background: #334155;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.2rem;
+            font-size: 0.75rem;
+            margin-right: 0.2rem;
+        }
     </style>
   </head>
   <body>
     <header>
-      <h1>NetVista Visual Recon Dashboard</h1>
-      <p>Discovered Hosts & Visual Insights</p>
+        <div>
+            <h1>NetVista Visual Recon Dashboard</h1>
+            <p>Discovered Hosts & Visual Intelligence Clustering</p>
+        </div>
+        <div class="metadata">
+            Total Results: {{len .Results}}
+        </div>
     </header>
 
-    <div class="grid">
-      {{range .Results}}
-      <div class="card">
-        <a href="{{.URL}}" target="_blank">
-          <img
-            src="./{{.URL | sanitize}}.png"
-            alt="Screenshot of {{.URL}}"
-            onerror="this.src='https://placehold.co/600x400/1e293b/f1f5f9?text=No+Screenshot'"
-          />
-        </a>
-        <div class="card-content">
-          <div class="card-title">{{.URL}}</div>
-          <div>
-            <span
-              class="badge {{if eq .Metadata.StatusCode 200}}badge-success{{else}}badge-warning{{end}}"
-            >
-              HTTP {{.Metadata.StatusCode}}
-            </span>
-          </div>
-          <div class="metadata">
-            <div><strong>Title:</strong> {{.Metadata.Title}}</div>
-            <div><strong>Size:</strong> {{.Metadata.ContentLength}} bytes</div>
-            <div>
-              <strong>Detected at:</strong> {{.Metadata.Timestamp.Format
-              "2006-01-02 15:04:05"}}
-            </div>
-          </div>
+    {{range $key, $targets := .Grouped}}
+    <div class="cluster">
+        <div class="cluster-header">
+            Visual Cluster: {{$key}}
+            <span class="cluster-count">{{len $targets}} hosts</span>
         </div>
-      </div>
-      {{end}}
+        <div class="grid">
+            {{range $targets}}
+            <div class="card">
+                <a href="{{.URL}}" target="_blank">
+                    <img src="./{{.URL | sanitize}}.png" alt="Screenshot of {{.URL}}" onerror="this.src='https://placehold.co/600x400/1e293b/f1f5f9?text=No+Screenshot'">
+                </a>
+                <div class="card-content">
+                    <div class="card-title">{{.URL}}</div>
+                    <div>
+                        <span class="badge {{if eq .Metadata.StatusCode 200}}badge-success{{else}}badge-warning{{end}}">
+                            HTTP {{.Metadata.StatusCode}}
+                        </span>
+                        {{range .Metadata.Technology}}
+                        <span class="tech-tag">{{.}}</span>
+                        {{end}}
+                    </div>
+                    <div class="metadata">
+                        <div><strong>Title:</strong> {{.Metadata.Title}}</div>
+                        {{if .PHash}}<div><strong>PHash:</strong> {{.PHash}}</div>{{end}}
+                        <div><strong>Detected at:</strong> {{.Metadata.Timestamp.Format "2006-01-02 15:04:05"}}</div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
     </div>
+    {{end}}
   </body>
 </html>

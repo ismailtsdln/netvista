@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -12,14 +13,24 @@ import (
 )
 
 type Prober struct {
-	Client  *http.Client
-	Timeout time.Duration
+	Client   *http.Client
+	Timeout  time.Duration
+	ProxyURL string
 }
 
-func NewProber(timeout time.Duration) *Prober {
+func NewProber(timeout time.Duration, proxyURL string) *Prober {
+	transport := &http.Transport{}
+	if proxyURL != "" {
+		proxy, err := url.Parse(proxyURL)
+		if err == nil {
+			transport.Proxy = http.ProxyURL(proxy)
+		}
+	}
+
 	return &Prober{
 		Client: &http.Client{
-			Timeout: timeout,
+			Timeout:   timeout,
+			Transport: transport,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				if len(via) >= 10 {
 					return fmt.Errorf("stopped after 10 redirects")
@@ -27,7 +38,8 @@ func NewProber(timeout time.Duration) *Prober {
 				return nil
 			},
 		},
-		Timeout: timeout,
+		Timeout:  timeout,
+		ProxyURL: proxyURL,
 	}
 }
 

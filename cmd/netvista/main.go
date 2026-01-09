@@ -32,6 +32,7 @@ func main() {
 	output := scanCmd.String("o", "./out", "Output directory for reports")
 	timeout := scanCmd.String("t", "5s", "Timeout per host")
 	nmapFile := scanCmd.String("nmap", "", "Nmap XML file to parse")
+	proxy := scanCmd.String("proxy", "", "Proxy URL (e.g., http://127.0.0.1:8080 or socks5://127.0.0.1:1080)")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Expected 'scan' subcommand")
@@ -48,7 +49,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		p := prober.NewProber(d)
+		p := prober.NewProber(d, *proxy)
 		e := engine.NewEngine(*concurrency, p)
 
 		pm := plugins.NewPluginManager()
